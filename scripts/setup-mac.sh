@@ -30,6 +30,9 @@ if ! command -v git-lfs >/dev/null; then
 	echo "    (add to your shell: export PATH=\"$(cd "$TOOLS" && pwd):\$PATH\")"
 fi
 git -C "$REPO" lfs install --local >/dev/null
+# Only the runtime assets under bin/data are needed; art/ is README imagery
+# (~11MB). fetchexclude also keeps later pulls/checkouts from fetching it.
+git -C "$REPO" config lfs.fetchexclude "art/**"
 git -C "$REPO" lfs pull
 
 # --- openFrameworks -------------------------------------------------------

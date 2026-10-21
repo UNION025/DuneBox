@@ -143,6 +143,18 @@ OpenFrameworks' projectGenerator.
 > addon pins and build flags. It builds and releases on **Windows** (MSVC, via
 > projectGenerator). Windows is the only supported platform.
 
+### Build on macOS (this fork)
+```bash
+./scripts/setup-mac.sh   # OF 0.12.0 -> ../openFrameworks, pinned addons, LFS assets
+make -j8 && open bin/DuneBox.app
+```
+macOS tops out at OpenGL 4.1, so water runs on the fragment-shader path.
+Kinect v1 (`kinectVersion` 1) works through ofxKinect / libfreenect.
+
+> **Skipping README imagery:** only `bin/data/` LFS assets are needed at
+> runtime. `setup-mac.sh` sets this for you; on Windows run once after cloning:
+> `git config lfs.fetchexclude "art/**"` then `git lfs pull`.
+
 Press **`w`** to toggle water simulation. Works without a Kinect (test terrain fallback).
 
 ## Project Structure
