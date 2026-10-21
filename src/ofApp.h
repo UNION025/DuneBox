@@ -93,6 +93,38 @@ private:
 	bool useTestTerrain;           // True when Kinect is unavailable
 	void generateTestTerrain();    // Fill testTerrainFbo with sine-wave heightfield
 	void detectRainGesture();      // Threshold-based hand detection for rain
+	ofTexture& waterSimGetOutputTexture();
+
+	// The Kinect depth texture is distance-like (0 = near = high sand), but
+	// the water solver treats a larger bathymetry value as higher ground, as
+	// generateTestTerrain() does. kinectTerrainFbo holds 1 - depth for it.
+	ofFbo kinectTerrainFbo;
+	ofTexture& kinectTerrainForWater();
+
+	// Water lives in Kinect pixel space; drawWaterOnSand() maps it onto the
+	// sand through the projector calibration (the plain draw stretched the
+	// whole Kinect frame over the whole projector window).
+	ofMesh waterSandMesh;
+	void drawWaterOnSand();
+
+	// River: a steady spring on the highest point of the sand.
+	bool riverEnabled = false;
+	float riverFlow = 1.0f;          // operator multiplier (GUI slider)
+	ofVec2f riverSource{-1, -1};     // sim-grid position; x < 0 = none yet
+	ofVec2f riverCandidate{-1, -1};
+	float riverCandidateAge = 0;     // seconds the candidate peak has held still
+	float riverSearchTimer = 0;
+	void setRiverEnabled(bool on);
+	void updateRiver(float dt);
+	bool findTerrainPeak(ofVec2f& simPos);
+
+	// Operator panel for the water features (shown while running).
+	ofxDatGui* waterGui = nullptr;
+	void setupWaterGui();
+	void updateWaterGui();
+	void onWaterGuiToggle(ofxDatGuiToggleEvent e);
+	void onWaterGuiButton(ofxDatGuiButtonEvent e);
+	void onWaterGuiSlider(ofxDatGuiSliderEvent e);
 
 	// Main window ROI 
 	ofRectangle mainWindowROI;

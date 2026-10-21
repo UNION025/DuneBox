@@ -117,6 +117,13 @@
 		"Erosion: on": "侵食：オン",
 		"Erosion: off": "侵食：オフ",
 
+		"Water": "水",
+		"Water simulation  (W)": "水シミュレーション（W）",
+		"River from the peak  (K)": "山頂から川を流す（K）",
+		"River flow": "川の水量",
+		"Rain from hands": "手をかざすと雨",
+		"Clear water  (X)": "水を消す（X）",
+
 		"Animals": "動物",
 		"# of fish": "魚の数",
 		"# of rabbits": "ウサギの数",

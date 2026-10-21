@@ -101,7 +101,9 @@ void ofApp::setup() {
 	terrainSettings.maxFilter = GL_LINEAR;
 	terrainSettings.useDepth = false;
 	testTerrainFbo.allocate(terrainSettings);
+	kinectTerrainFbo.allocate(terrainSettings);
 	generateTestTerrain();
+	setupWaterGui();
 
 	ofLogNotice("ofApp") << "Water simulation initialized (" << waterW << "x" << waterH
 	                     << "). Press 'w' to toggle.";
@@ -200,6 +202,7 @@ void ofApp::update() {
 			status["evaporation"] = evap <= 0.0f ? "off" : (evap < 0.08f ? "slow" : "fast");
 			status["hand_rain"] = handRainEnabled;
 			status["erosion"] = waterSimIsErosion();
+			status["river"] = riverEnabled;
 			status["roi_calibrated"] = kinectProjector->isROICalibrated();
 			status["projector_calibrated"] = kinectProjector->isCalibrated();
 			status["calibration_text"] = kinectProjector->getCalibrationText();
@@ -230,8 +233,7 @@ void ofApp::update() {
 		{
 			// Use live Kinect depth data
 			useTestTerrain = false;
-			ofTexture& depthTex = kinectProjector->getTexture();
-			waterSimUpdate(depthTex, ofGetLastFrameTime());
+			waterSimUpdate(kinectTerrainForWater(), ofGetLastFrameTime());
 		}
 		else
 		{
@@ -244,7 +246,9 @@ void ofApp::update() {
 
 		// Rain gesture detection
 		if (handRainEnabled) detectRainGesture();
+		updateRiver(ofGetLastFrameTime());
 	}
+	updateWaterGui();
 }
 
 
@@ -259,6 +263,15 @@ void ofApp::draw()
 	{
 		sandSurfaceRenderer->drawMainWindow(x, y, w, h);//400, 20, 400, 300);
 		boidGameController.drawMainWindow(x, y, w, h);
+		if (waterGui) {
+			ofPushStyle();
+			ofDisableDepthTest();
+			ofEnableAlphaBlending();
+			ofFill();
+			ofSetColor(255);
+			waterGui->draw();
+			ofPopStyle();
+		}
 	}
 
 	kinectProjector->drawMainWindow(x, y, w, h);
@@ -383,6 +396,20 @@ void ofApp::onMonitorDrawProj(ofEventArgs& args) {
 	if (ofGetElapsedTimeMillis() - monitorLastProj < kMonitorIntervalMs) return;
 	monitorLastProj = ofGetElapsedTimeMillis();
 	saveWindowShot(monitorDir, "projector");
+	if (waterSimIsEnabled()) {
+		// The solver's own output, independent of what covers the projector.
+		ofFloatPixels water;
+		waterSimGetOutputTexture().readToPixels(water);
+		// RGB only: dry cells are fully transparent and would save as blank.
+		ofPixels water8;
+		water8.allocate(water.getWidth(), water.getHeight(), OF_PIXELS_RGB);
+		for (size_t p = 0; p < water.getWidth() * water.getHeight(); ++p)
+			for (int ch = 0; ch < 3; ++ch)
+				water8[p * 3 + ch] = (unsigned char)ofClamp(water[p * water.getNumChannels() + ch] * 255.0f, 0.0f, 255.0f);
+		std::string tmp = ofFilePath::join(monitorDir, "water.tmp.png");
+		ofSaveImage(water8, tmp);
+		ofFile::moveFromTo(tmp, ofFilePath::join(monitorDir, "water.png"), false, true);
+	}
 }
 
 void ofApp::drawProjWindow(ofEventArgs &args) 
@@ -392,11 +419,8 @@ void ofApp::drawProjWindow(ofEventArgs &args)
 		sandSurfaceRenderer->drawProjectorWindow();
 
 		// Water overlay - composited on top of terrain, under game layers
-		if (waterSimIsEnabled()) {
-			float projW = projWindow->getWidth();
-			float projH = projWindow->getHeight();
-			waterSimDraw(projW, projH);
-		}
+		if (waterSimIsEnabled())
+			drawWaterOnSand();
 
 		mapGameController.drawProjectorWindow();
 		boidGameController.drawProjectorWindow();
@@ -584,6 +608,10 @@ void ofApp::keyPressed(int key)
 		volcanoSourceY = cy;
 		ofLogNotice("ofApp") << "Volcano eruption triggered at center";
 	}
+	else if (key == 'k')
+	{
+		setRiverEnabled(!riverEnabled);
+	}
 	else if (key == 'x')
 	{
 		waterSimClear();
@@ -613,6 +641,7 @@ void ofApp::handleDashboardCommand(const ofJson& msg)
 		{"start_app", ' '},
 		{"dry_water", 'x'},
 		{"toggle_erosion", 'e'},
+		{"toggle_river", 'k'},
 	};
 	const std::string action = msg.value("action", "");
 	ofLogNotice("Bridge") << "Dashboard command: " << action;
@@ -694,6 +723,18 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 
 // --- Water simulation helpers ---------------------------------------
 
+namespace {
+// The heightfield generateTestTerrain() draws, as elevation in [0,1].
+float testTerrainElevation(float fx, float fy, float t) {
+	// Rolling hills with a central valley
+	float elev = 0.5f
+	    + 0.2f * sin(fx * 4.0f * PI + t)
+	    + 0.15f * sin(fy * 3.0f * PI + t * 0.7f)
+	    + 0.1f * cos((fx + fy) * 5.0f * PI);
+	return ofClamp(elev, 0.0f, 1.0f);
+}
+}
+
 void ofApp::generateTestTerrain() {
 	testTerrainFbo.begin();
 	ofClear(0, 0, 0, 0);
@@ -709,15 +750,7 @@ void ofApp::generateTestTerrain() {
 
 	for (int y = 0; y < h; y += 2) {
 		for (int x = 0; x < w; x += 2) {
-			float fx = (float)x / w;
-			float fy = (float)y / h;
-			// Rolling hills with a central valley
-			float elev = 0.5f
-			    + 0.2f * sin(fx * 4.0f * PI + t)
-			    + 0.15f * sin(fy * 3.0f * PI + t * 0.7f)
-			    + 0.1f * cos((fx + fy) * 5.0f * PI);
-			// Clamp to [0,1]
-			elev = ofClamp(elev, 0.0f, 1.0f);
+			float elev = testTerrainElevation((float)x / w, (float)y / h, t);
 
 			ofFloatColor c(elev, 0.0f, 0.0f, 1.0f);
 			mesh.addVertex(ofVec3f(x, y, 0));
@@ -796,8 +829,10 @@ void ofApp::detectRainGesture() {
 	const int stride = std::max(1, (int)hits.size() / maxSources);
 	int added = 0;
 	for (size_t i = 0; i < hits.size() && added < maxSources; i += (size_t)stride) {
-		float simX = ((hits[i].x - startX) / roi.width) * simW;
-		float simY = ((hits[i].y - startY) / roi.height) * simH;
+		// The sim grid covers the whole Kinect frame (not just the ROI).
+		ofVec2f kinectRes = kinectProjector->getKinectRes();
+		float simX = hits[i].x / kinectRes.x * simW;
+		float simY = hits[i].y / kinectRes.y * simH;
 		waterSimAddWater(simX, simY, 15.0f, 0.3f);
 		++added;
 	}
@@ -896,4 +931,216 @@ float ofApp::waterSimGetEvaporation() const {
 bool ofApp::waterSimIsLavaMode() const {
 	if (useComputeWaterSim) return waterSimCompute.getFluidType() == ComputeWaterSimulation::FLUID_LAVA;
 	else return waterSimFragment.isLavaMode();
+}
+
+ofTexture& ofApp::waterSimGetOutputTexture() {
+	if (useComputeWaterSim) return waterSimCompute.getOutputTexture();
+	return waterSimFragment.getOutputTexture();
+}
+
+// --- Kinect terrain for the water solver ----------------------------
+
+ofTexture& ofApp::kinectTerrainForWater() {
+	// 1 - depth: start from 1 and let the subtract blend take the depth off.
+	kinectTerrainFbo.begin();
+	ofClear(255, 255, 255, 255);
+	ofPushStyle();
+	ofEnableBlendMode(OF_BLENDMODE_SUBTRACT);
+	ofSetColor(255);
+	kinectProjector->getTexture().draw(0, 0, kinectTerrainFbo.getWidth(), kinectTerrainFbo.getHeight());
+	ofPopStyle();
+	kinectTerrainFbo.end();
+	return kinectTerrainFbo.getTexture();
+}
+
+// --- Water drawn onto the sand ----------------------------------------
+
+void ofApp::drawWaterOnSand() {
+	ofTexture& water = waterSimGetOutputTexture();
+	ofRectangle roi = kinectProjector->getKinectROI();
+	if (!water.isAllocated() || roi.width <= 0 || roi.height <= 0) return;
+
+	// A grid over the sand region: positions go through the calibration (on
+	// the measured sand surface), texture coordinates stay in Kinect space.
+	const int step = 8;
+	ofVec2f kinectRes = kinectProjector->getKinectRes();
+	float sx = water.getWidth() / kinectRes.x;
+	float sy = water.getHeight() / kinectRes.y;
+	int cols = (int)(roi.width / step) + 1;
+	int rows = (int)(roi.height / step) + 1;
+
+	waterSandMesh.clear();
+	waterSandMesh.setMode(OF_PRIMITIVE_TRIANGLES);
+	for (int r = 0; r < rows; ++r) {
+		for (int c = 0; c < cols; ++c) {
+			float kx = std::min(roi.x + c * step, roi.getRight() - 1);
+			float ky = std::min(roi.y + r * step, roi.getBottom() - 1);
+			ofVec2f p = kinectProjector->kinectCoordToProjCoord(kx, ky);
+			waterSandMesh.addVertex(ofVec3f(p.x, p.y, 0));
+			waterSandMesh.addTexCoord(water.getCoordFromPoint(kx * sx, ky * sy));
+		}
+	}
+	for (int r = 0; r + 1 < rows; ++r) {
+		for (int c = 0; c + 1 < cols; ++c) {
+			ofIndexType i = r * cols + c;
+			waterSandMesh.addTriangle(i, i + 1, i + cols);
+			waterSandMesh.addTriangle(i + 1, i + cols + 1, i + cols);
+		}
+	}
+
+	ofPushStyle();
+	ofEnableAlphaBlending();
+	ofSetColor(255);
+	water.bind();
+	waterSandMesh.draw();
+	water.unbind();
+	ofPopStyle();
+}
+
+// --- River from the peak ----------------------------------------------
+
+void ofApp::setRiverEnabled(bool on) {
+	riverEnabled = on;
+	riverSource.set(-1, -1);
+	riverCandidate.set(-1, -1);
+	riverCandidateAge = 0;
+	riverSearchTimer = 0;
+	if (on && !waterSimIsEnabled()) waterSimToggleEnabled();
+	ofLogNotice("ofApp") << "River: " << (on ? "ON" : "OFF");
+}
+
+bool ofApp::findTerrainPeak(ofVec2f& simPos) {
+	const float simW = (float)waterSimGetSimWidth();
+	const float simH = (float)waterSimGetSimHeight();
+
+	if (useTestTerrain) {
+		float t = ofGetElapsedTimef() * 0.1f;
+		float best = -1, bx = 0.5f, by = 0.5f;
+		for (float fy = 0.1f; fy <= 0.9f; fy += 0.02f) {
+			for (float fx = 0.1f; fx <= 0.9f; fx += 0.02f) {
+				float e = testTerrainElevation(fx, fy, t);
+				if (e > best) { best = e; bx = fx; by = fy; }
+			}
+		}
+		simPos.set(bx * simW, by * simH);
+		return true;
+	}
+
+	if (!kinectProjector->isKinectConnected() ||
+	    kinectProjector->GetApplicationState() != KinectProjector::APPLICATION_STATE_RUNNING)
+		return false;
+
+	// Coarse grid inside the sand region, skipping a margin so the box walls
+	// never win. Each sample is a 3x3 mean, so a single noisy pixel can't.
+	ofRectangle roi = kinectProjector->getKinectROI();
+	if (roi.width <= 0 || roi.height <= 0) return false;
+	const int step = 6;
+	const float margin = 0.1f;
+	int x0 = (int)(roi.x + roi.width * margin), x1 = (int)(roi.getRight() - roi.width * margin);
+	int y0 = (int)(roi.y + roi.height * margin), y1 = (int)(roi.getBottom() - roi.height * margin);
+	int cols = (x1 - x0) / step + 1, rows = (y1 - y0) / step + 1;
+	if (cols < 3 || rows < 3) return false;
+
+	std::vector<float> elev((size_t)rows * cols);
+	for (int r = 0; r < rows; ++r)
+		for (int c = 0; c < cols; ++c)
+			elev[(size_t)r * cols + c] = kinectProjector->elevationAtKinectCoord(x0 + c * step, y0 + r * step);
+
+	// Above 250 mm is a hand or an arm, not sand.
+	const float maxSandMm = 250.0f;
+	float best = -1e9f;
+	int bestR = -1, bestC = -1;
+	for (int r = 1; r + 1 < rows; ++r) {
+		for (int c = 1; c + 1 < cols; ++c) {
+			float sum = 0;
+			for (int dr = -1; dr <= 1; ++dr)
+				for (int dc = -1; dc <= 1; ++dc)
+					sum += elev[(size_t)(r + dr) * cols + (c + dc)];
+			float mean = sum / 9.0f;
+			if (mean < maxSandMm && mean > best) { best = mean; bestR = r; bestC = c; }
+		}
+	}
+	if (bestR < 0) return false;
+
+	ofVec2f kinectRes = kinectProjector->getKinectRes();
+	simPos.set((x0 + bestC * step) / kinectRes.x * simW, (y0 + bestR * step) / kinectRes.y * simH);
+	return true;
+}
+
+void ofApp::updateRiver(float dt) {
+	if (!riverEnabled || waterSimIsLavaMode()) return;
+
+	// Look for the peak a few times a second. A hand over the sand makes a
+	// short-lived peak, so the spring only moves once the peak has held still.
+	const float searchInterval = 0.25f;
+	const float holdSeconds = 1.0f;
+	const float samePeakPx = 20.0f;
+	riverSearchTimer -= dt;
+	if (riverSearchTimer <= 0) {
+		riverSearchTimer = searchInterval;
+		ofVec2f peak;
+		if (findTerrainPeak(peak)) {
+			if (riverCandidate.x < 0 || riverCandidate.distance(peak) > samePeakPx)
+				riverCandidateAge = 0;
+			else
+				riverCandidateAge += searchInterval;
+			riverCandidate = peak;
+			if (riverSource.x < 0 || riverCandidateAge >= holdSeconds)
+				riverSource = riverCandidate;
+		}
+	}
+
+	if (riverSource.x >= 0) {
+		// Narrow, steady spring; scale by dt so the flow doesn't depend on fps.
+		const float radius = 6.0f;
+		const float amountPerFrameAt60 = 0.12f;
+		waterSimAddWater(riverSource.x, riverSource.y, radius, amountPerFrameAt60 * riverFlow * dt * 60.0f);
+	}
+}
+
+// --- Water panel ------------------------------------------------------
+
+void ofApp::setupWaterGui() {
+	using dunebox::i18n::trLabel;
+	waterGui = new ofxDatGui(0, 255);
+	trLabel(waterGui->addHeader("Water", false));
+	trLabel(waterGui->addToggle("Water simulation  (W)", waterSimIsEnabled()))->setName("Water");
+	trLabel(waterGui->addToggle("River from the peak  (K)", riverEnabled))->setName("River");
+	trLabel(waterGui->addSlider("River flow", 0.2, 3.0, riverFlow))->setName("River flow");
+	trLabel(waterGui->addToggle("Rain from hands", handRainEnabled))->setName("Hand rain");
+	trLabel(waterGui->addButton("Clear water  (X)"))->setName("Clear water");
+	waterGui->onToggleEvent(this, &ofApp::onWaterGuiToggle);
+	waterGui->onButtonEvent(this, &ofApp::onWaterGuiButton);
+	waterGui->onSliderEvent(this, &ofApp::onWaterGuiSlider);
+	waterGui->setAutoDraw(false); // drawn in draw() with the other panels' GL state
+}
+
+void ofApp::updateWaterGui() {
+	if (!waterGui) return;
+	bool running = kinectProjector->GetApplicationState() == KinectProjector::APPLICATION_STATE_RUNNING;
+	waterGui->setVisible(running);
+	if (!running) return;
+	// Keys and the bridge can change these too; keep the toggles honest.
+	waterGui->getToggle("Water")->setChecked(waterSimIsEnabled());
+	waterGui->getToggle("River")->setChecked(riverEnabled);
+	waterGui->getToggle("Hand rain")->setChecked(handRainEnabled);
+	waterGui->update();
+}
+
+void ofApp::onWaterGuiToggle(ofxDatGuiToggleEvent e) {
+	if (e.target->is("Water")) {
+		if (e.checked != waterSimIsEnabled()) waterSimToggleEnabled();
+	} else if (e.target->is("River")) {
+		setRiverEnabled(e.checked);
+	} else if (e.target->is("Hand rain")) {
+		handRainEnabled = e.checked;
+	}
+}
+
+void ofApp::onWaterGuiButton(ofxDatGuiButtonEvent e) {
+	if (e.target->is("Clear water")) waterSimClear();
+}
+
+void ofApp::onWaterGuiSlider(ofxDatGuiSliderEvent e) {
+	if (e.target->is("River flow")) riverFlow = (float)e.value;
 }
