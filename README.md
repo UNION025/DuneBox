@@ -151,6 +151,17 @@ make -j8 && open bin/DuneBox.app
 macOS tops out at OpenGL 4.1, so water runs on the fragment-shader path.
 Kinect v1 (`kinectVersion` 1) works through ofxKinect / libfreenect.
 
+#### Apple Silicon (alpha)
+The same two commands build a native arm64 app on M-series Macs: every
+prebuilt library in OF 0.12.0 and the addons is universal (x86_64 + arm64).
+A cross-build from an Intel Mac compiles and links cleanly, but nothing has
+been run on Apple Silicon yet, Kinect v1 over USB included. To cross-build
+on Intel (use a separate OF tree; `addons/obj` is shared between archs):
+```bash
+make CC="clang -arch arm64" CXX="clang++ -arch arm64" USER_LDFLAGS="-arch arm64"
+```
+(remove `-mtune=native` from `config.osx.default.mk` in that tree first).
+
 ### UI language (this fork)
 The UI is Japanese by default. Set `bin/data/settings/language.txt` to `en`
 for English. Translations live in `bin/data/lang/ja.json` (English text →
