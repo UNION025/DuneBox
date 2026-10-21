@@ -28,3 +28,4 @@ bin/*.lib
 bin/DuneBox.app/
 bin/DuneBox_debug.app/
 openFrameworks-Info.plist
+bin/data/DebugFiles/*.log
