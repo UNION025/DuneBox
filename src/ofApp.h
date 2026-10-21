@@ -116,4 +116,13 @@ private:
 
 	// Startup diagnostics
 	Diagnostics diagnostics;
+
+	// Remote screen monitor: with DUNEBOX_MONITOR_DIR set, both windows are
+	// saved there as main.png / projector.png every few seconds (for checking
+	// a rig without screen-recording access).
+	std::string monitorDir;
+	uint64_t monitorLastMain = 0;
+	uint64_t monitorLastProj = 0;
+	void onMonitorDrawMain(ofEventArgs& args);
+	void onMonitorDrawProj(ofEventArgs& args);
 };

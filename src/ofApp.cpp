@@ -30,6 +30,16 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ofApp::~ofApp() = default;
 
 void ofApp::setup() {
+	if (const char* dir = std::getenv("DUNEBOX_MONITOR_DIR")) {
+		monitorDir = dir;
+		ofDirectory::createDirectory(monitorDir, false, true);
+		// Run after the app and the GUI/modal overlays have drawn.
+		ofAddListener(ofEvents().draw, this, &ofApp::onMonitorDrawMain, OF_EVENT_ORDER_AFTER_APP + 1000);
+		if (projWindow)
+			ofAddListener(projWindow->events().draw, this, &ofApp::onMonitorDrawProj, OF_EVENT_ORDER_AFTER_APP + 1000);
+		ofLogNotice("ofApp") << "screen monitor: saving windows to " << monitorDir;
+	}
+
 	// OF basics
 	ofSetFrameRate(60);
 	ofBackground(0);
@@ -286,7 +296,8 @@ void ofApp::draw()
 		ofSetColor(255);
 	}
 
-	// Bottom-right status indicator (bottom-left is the Status panel). Only advertise the active theme once the
+	// Bottom-centre status indicator (the bottom corners hold the Status and
+	// Animals panels). Only advertise the active theme once the
 	// app is actually RUNNING; otherwise show the real state so the screen
 	// doesn't look like a broken "Theme: Topo" running view.
 	{
@@ -308,7 +319,7 @@ void ofApp::draw()
 				alpha = ofMap(themeDisplayTimer, 0, 0.5f, 180, 255);
 		}
 		ofTrueTypeFont& font = dunebox::i18n::uiFont(10);
-		int tx = ofGetWidth() - (int)font.stringWidth(label) - 12;
+		int tx = (ofGetWidth() - (int)font.stringWidth(label)) / 2;
 		int ty = ofGetHeight() - 14;
 		// Shadow
 		ofSetColor(0, 0, 0, (int)(alpha * 0.7f));
@@ -348,6 +359,30 @@ void ofApp::draw()
 	ofDisableDepthTest();
 	ofEnableAlphaBlending();
 	ofSetColor(255);
+}
+
+namespace {
+const uint64_t kMonitorIntervalMs = 3000;
+
+// Grab the current window's framebuffer and swap it in atomically so a reader
+// never sees a half-written PNG.
+void saveWindowShot(const std::string& dir, const std::string& name) {
+	std::string tmp = ofFilePath::join(dir, name + ".tmp.png");
+	ofSaveScreen(tmp); // RGB only: the framebuffer's alpha would make the PNG transparent
+	ofFile::moveFromTo(tmp, ofFilePath::join(dir, name + ".png"), false, true);
+}
+}
+
+void ofApp::onMonitorDrawMain(ofEventArgs& args) {
+	if (ofGetElapsedTimeMillis() - monitorLastMain < kMonitorIntervalMs) return;
+	monitorLastMain = ofGetElapsedTimeMillis();
+	saveWindowShot(monitorDir, "main");
+}
+
+void ofApp::onMonitorDrawProj(ofEventArgs& args) {
+	if (ofGetElapsedTimeMillis() - monitorLastProj < kMonitorIntervalMs) return;
+	monitorLastProj = ofGetElapsedTimeMillis();
+	saveWindowShot(monitorDir, "projector");
 }
 
 void ofApp::drawProjWindow(ofEventArgs &args) 

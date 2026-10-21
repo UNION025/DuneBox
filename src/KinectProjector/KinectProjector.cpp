@@ -912,14 +912,11 @@ void KinectProjector::updateProjKinectAutoCalibration()
 			applicationState = APPLICATION_STATE_SETUP;
 			calibrationText = "Calibration successful";
 
-			//saveCalibrationAndSettings(); // Already done in updateROIFromCalibration
-			if (kpt->saveCalibration("settings/calibration.xml"))
-			{
-				ofLogVerbose("KinectProjector") << "update(): initialisation: Calibration saved ";
-			}
-			else {
-				ofLogVerbose("KinectProjector") << "update(): initialisation: Calibration could not be saved ";
-			}
+			// Save the settings too: they hold the sea-level plane measured at the
+			// start of this calibration, which otherwise only reached disk on a
+			// clean exit (updateROIFromCalibration, which used to save it, is
+			// disabled above) and was lost if the app was killed or crashed.
+			saveCalibrationAndSettings();
 			updateStatusGUI();
         }
         autoCalibState = AUTOCALIB_STATE_DONE;
