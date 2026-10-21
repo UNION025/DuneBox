@@ -65,8 +65,31 @@ bool setWindowDimensions(ofGLFWWindowSettings& settings, int windowsNum) {
 
 }
 
+#ifndef _WIN32
+#include <unistd.h>
+#include <cstdio>
+
+// Launched from Finder there is no terminal, so stdout/stderr (OF logs,
+// libfreenect's USB messages, calibration output) would be lost. Send them to
+// data/DebugFiles/dunebox.log, keeping the previous run as dunebox-prev.log.
+static void logToFileUnlessTerminal() {
+	if (isatty(STDOUT_FILENO)) return;
+	std::string dir = ofToDataPath("DebugFiles", true);
+	ofDirectory::createDirectory(dir, false, true);
+	std::string log = ofFilePath::join(dir, "dunebox.log");
+	std::rename(log.c_str(), ofFilePath::join(dir, "dunebox-prev.log").c_str());
+	if (std::freopen(log.c_str(), "w", stdout)) {
+		setvbuf(stdout, nullptr, _IOLBF, 0);
+		dup2(fileno(stdout), STDERR_FILENO);
+	}
+}
+#endif
+
 //========================================================================
 int main() {
+#ifndef _WIN32
+	logToFileUnlessTerminal();
+#endif
 	ofGLFWWindowSettings settings;
 
 	// Try GL 4.3 first (needed for compute shaders in water simulation).

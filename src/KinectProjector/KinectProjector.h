@@ -293,6 +293,7 @@ private:
     void drawArrow(ofVec2f projectedPoint, ofVec2f v1);
 
     void saveCalibrationAndSettings();
+    void cancelCalibration();
     bool loadSettings();
     bool saveSettings();
     

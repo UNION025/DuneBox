@@ -17,6 +17,7 @@ namespace tok {
 	inline ofColor borderStrong() { return ofColor::fromHex(0x3A3A3A); }
 	inline ofColor text()         { return ofColor::fromHex(0xEDEDED); }
 	inline ofColor text2()        { return ofColor::fromHex(0xA1A1A1); }
+	inline ofColor textOff()      { return ofColor::fromHex(0x5C5C5C); } // disabled controls
 	inline ofColor accent()       { return ofColor::fromHex(0x52A8FF); }
 	inline ofColor ok()           { return ofColor::fromHex(0x3FCF8E); }
 	inline ofColor warn()         { return ofColor::fromHex(0xF5A524); }

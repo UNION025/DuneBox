@@ -70,6 +70,8 @@
 		"Calibrating projector": "プロジェクターを調整中",
 		"Manually defining sand region": "砂の範囲を手動で指定中",
 		"Calibration cancelled": "キャリブレーションを中止しました",
+		"Cancel calibration": "キャリブレーションを中止",
+		"Refit needs a successful projector calibration": "範囲の調整には、先に「2. プロジェクターを調整」の成功が必要です",
 
 		"Ok": "OK",
 		"Cancel": "キャンセル",

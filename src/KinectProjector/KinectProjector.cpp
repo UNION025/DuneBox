@@ -228,6 +228,20 @@ void KinectProjector::updateStatusGUI()
 	if (!displayGui)
 		return;
 
+	// Calibration buttons: only Cancel while a calibration runs; Refit only
+	// once a projector calibration exists.
+	bool calibrating = applicationState == APPLICATION_STATE_CALIBRATING;
+	auto enable = [this](const std::string& name, bool on) {
+		auto b = gui->getButton(name);
+		b->setEnabled(on);
+		b->setLabelColor(on ? dunebox::tok::text() : dunebox::tok::textOff());
+	};
+	enable("Manually define sand region", !calibrating);
+	enable("Automatically calibrate kinect & projector", !calibrating);
+	enable("Auto Adjust ROI", !calibrating && projKinectCalibrated);
+	enable("Start Application", !calibrating);
+	enable("Cancel calibration", calibrating);
+
 	auto setStatus = [this](const std::string& row, const std::string& text, const ofColor& tone) {
 		auto label = StatusGUI->getLabel(row);
 		label->setLabel(tr(text));
@@ -1496,6 +1510,7 @@ void KinectProjector::setupGui(){
 	trLabel(calibrationFolder->addButton("2. Calibrate projector"))->setName("Automatically calibrate kinect & projector");
 	trLabel(calibrationFolder->addButton("Refit region to calibration"))->setName("Auto Adjust ROI");
 	trLabel(calibrationFolder->addToggle("Outline region on sand", doShowROIonProjector))->setName("Show ROI on sand");
+	trLabel(calibrationFolder->addButton("Cancel calibration"))->setName("Cancel calibration");
 	calibrationFolder->expand();
 
 	trLabel(gui->addButton("Start sandbox  (Space)"))->setName("Start Application");
@@ -1740,6 +1755,16 @@ void KinectProjector::setFollowBigChanges(bool sfollowBigChanges){
 }
 
 void KinectProjector::onButtonEvent(ofxDatGuiButtonEvent e){
+	// While calibrating only Cancel works: a stray click on "2. Calibrate
+	// projector" used to restart the run at the flatten-sand prompt, and
+	// "Refit region" mid-run replaced the sand region with a bogus one.
+	if (applicationState == APPLICATION_STATE_CALIBRATING) {
+		if (e.target->is("Cancel calibration"))
+			cancelCalibration();
+		else
+			ofLogNotice("KinectProjector") << "Ignoring '" << e.target->getName() << "' during calibration";
+		return;
+	}
     if (e.target->is("Full Calibration")) {
         startFullCalibration();
     } 
@@ -1747,8 +1772,15 @@ void KinectProjector::onButtonEvent(ofxDatGuiButtonEvent e){
 	{
 		startApplication();
 	}
-	else if (e.target->is("Update ROI from calibration")) {
-		updateROIFromCalibration();
+	else if (e.target->is("Update ROI from calibration") || e.target->is("Auto Adjust ROI")) {
+		// Refitting derives the region from the projector calibration; without
+		// a valid one it produces a meaningless rectangle.
+		if (projKinectCalibrated)
+			updateROIFromCalibration();
+		else {
+			calibrationText = "Refit needs a successful projector calibration";
+			updateStatusGUI();
+		}
 	} else if (e.target->is("Automatically detect sand region")) {
         startAutomaticROIDetection();
     } else if (e.target->is("Manually define sand region")){
@@ -1762,10 +1794,6 @@ void KinectProjector::onButtonEvent(ofxDatGuiButtonEvent e){
 		ResetSeaLevel();
 
     }
-	else if (e.target->is("Auto Adjust ROI"))
-	{
-		updateROIFromCalibration();
-	}
 }
 
 void KinectProjector::StartManualROIDefinition()
@@ -1873,6 +1901,18 @@ void KinectProjector::remoteConfirm()
 	confirmModalVisible = false;
 	confirmModal->hide();
 	onConfirmModalEvent(ofxModalEvent(ofxModalEvent::CONFIRM, confirmModal.get()));
+}
+
+void KinectProjector::cancelCalibration()
+{
+	if (applicationState != APPLICATION_STATE_CALIBRATING) return;
+	confirmModalVisible = false;
+	confirmModal->hide();
+	calibModal->hide();
+	waitingForFlattenSand = false;
+	applicationState = APPLICATION_STATE_SETUP;
+	calibrationText = "Calibration cancelled";
+	updateStatusGUI();
 }
 
 void KinectProjector::remoteCancel()
