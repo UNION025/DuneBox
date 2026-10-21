@@ -31,6 +31,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "../KinectProjector/KinectProjector.h"
 #include "ColorMap.h"
 #include "ColorTheme.h"
+#include "../Localization/Localization.h"
 
 
 class SaveModal : public ofxModalWindow
@@ -38,11 +39,11 @@ class SaveModal : public ofxModalWindow
 public:
     SaveModal(std::shared_ptr<ofxModalTheme> theme){
         setTheme(theme);
-        setTitle("Save Color Map File");
+        setTitle(dunebox::i18n::tr("Save Color Map File"));
         textInput = addComponent(new ofxDatGuiTextInput("file name", ""));
-        addButton("Cancel");
+        addButton(dunebox::i18n::tr("Cancel"));
         ofxDatGuiButton* closeButton = getButton(0);
-        closeButton->setLabel("Save");
+        closeButton->setLabel(dunebox::i18n::tr("Save"));
         closeButton->setLabelColor(ofColor::fromHex(0xffffff));
         closeButton->setBackgroundColors(
                                          ofColor::fromHex(0x337ab7),     // normal //

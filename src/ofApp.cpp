@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "ofApp.h"
 #include "DuneBoxGuiTheme.h"
+#include "Localization/Localization.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -258,7 +259,7 @@ void ofApp::draw()
 		// is otherwise meaningless to a setup operator and looks like a broken
 		// running screen. Shown only in SETUP (not while CALIBRATING, which has
 		// its own modal prompts).
-		std::string hint =
+		const std::string hint = dunebox::i18n::tr(
 			"DuneBox is in setup\n"
 			"The sand map appears here once calibration is loaded.\n"
 			"\n"
@@ -266,18 +267,26 @@ void ofApp::draw()
 			"from the Calibration panel on the right:\n"
 			"  1) Draw the sand region (skip if Sand region says set),\n"
 			"  2) flatten the sand, then Calibrate projector,\n"
-			"  3) press Space again. The Status panel shows what's missing.";
-		int hx = ofGetWidth() / 2 - 240;
-		int hy = ofGetHeight() / 2 - 60;
+			"  3) press Space again. The Status panel shows what's missing.");
+		ofTrueTypeFont& font = dunebox::i18n::uiFont(11);
+		// getStringBoundingBox() over-reports the width of multi-line UTF-8
+		// text, so size the box from the widest line instead.
+		std::vector<std::string> lines = ofSplitString(hint, "\n");
+		float lineHeight = font.getLineHeight();
+		ofRectangle box(0, -font.getAscenderHeight(), 0, lineHeight * lines.size());
+		for (const auto& line : lines)
+			box.width = std::max(box.width, font.stringWidth(line));
+		int hx = ofGetWidth() / 2 - (int)(box.width / 2);
+		int hy = ofGetHeight() / 2 - (int)(box.height / 2 + box.y);
 		// Dark backing box so the white text is readable over any color feed.
 		ofSetColor(0, 0, 0, 170);
-		ofDrawRectangle(hx - 12, hy - 24, 560, 195);
+		ofDrawRectangle(hx - 12, hy + box.y - 12, box.width + 24, box.height + 24);
 		ofSetColor(255);
-		ofDrawBitmapString(hint, hx, hy);
+		font.drawString(hint, hx, hy);
 		ofSetColor(255);
 	}
 
-	// Bottom-left status indicator. Only advertise the active theme once the
+	// Bottom-right status indicator (bottom-left is the Status panel). Only advertise the active theme once the
 	// app is actually RUNNING; otherwise show the real state so the screen
 	// doesn't look like a broken "Theme: Topo" running view.
 	{
@@ -286,11 +295,11 @@ void ofApp::draw()
 		std::string name = sandSurfaceRenderer->getThemeName();
 		std::string label;
 		if (running)
-			label = "Theme: " + name;
+			label = dunebox::i18n::tr("Theme: ") + dunebox::i18n::tr(name);
 		else if (appState == KinectProjector::APPLICATION_STATE_CALIBRATING)
-			label = "CALIBRATING - follow the on-screen prompts";
+			label = dunebox::i18n::tr("CALIBRATING - follow the on-screen prompts");
 		else
-			label = "SETUP - not calibrated (calibrate via the GUI panel)";
+			label = dunebox::i18n::tr("SETUP - not calibrated (calibrate via the GUI panel)");
 		float alpha = 180;
 		if (running && themeDisplayTimer > 0) {
 			// Bright flash when recently switched
@@ -298,26 +307,29 @@ void ofApp::draw()
 			if (themeDisplayTimer < 0.5f)
 				alpha = ofMap(themeDisplayTimer, 0, 0.5f, 180, 255);
 		}
-		int tx = 12;
+		ofTrueTypeFont& font = dunebox::i18n::uiFont(10);
+		int tx = ofGetWidth() - (int)font.stringWidth(label) - 12;
 		int ty = ofGetHeight() - 14;
 		// Shadow
 		ofSetColor(0, 0, 0, (int)(alpha * 0.7f));
-		ofDrawBitmapString(label, tx + 1, ty + 1);
+		font.drawString(label, tx + 1, ty + 1);
 		// Foreground
 		ofSetColor(255, 255, 255, (int)alpha);
-		ofDrawBitmapString(label, tx, ty);
+		font.drawString(label, tx, ty);
 		ofSetColor(255);
 	}
 
 	// Theme switch banner (temporary large text)
 	if (kinectProjector->GetApplicationState() == KinectProjector::APPLICATION_STATE_RUNNING && themeDisplayTimer > 0) {
 		float fade = (themeDisplayTimer < 0.5f) ? themeDisplayTimer / 0.5f : 1.0f;
-		int cx = ofGetWidth() / 2 - (int)(themeDisplayName.length() * 4);
+		ofTrueTypeFont& font = dunebox::i18n::uiFont(16);
+		const std::string banner = dunebox::i18n::tr(themeDisplayName);
+		int cx = ofGetWidth() / 2 - (int)(font.stringWidth(banner) / 2);
 		int cy = ofGetHeight() / 2;
 		ofSetColor(0, 0, 0, (int)(200 * fade));
-		ofDrawBitmapString(themeDisplayName, cx + 1, cy + 1);
+		font.drawString(banner, cx + 1, cy + 1);
 		ofSetColor(255, 255, 80, (int)(255 * fade));
-		ofDrawBitmapString(themeDisplayName, cx, cy);
+		font.drawString(banner, cx, cy);
 		ofSetColor(255);
 	}
 

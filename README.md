@@ -151,6 +151,13 @@ make -j8 && open bin/DuneBox.app
 macOS tops out at OpenGL 4.1, so water runs on the fragment-shader path.
 Kinect v1 (`kinectVersion` 1) works through ofxKinect / libfreenect.
 
+### UI language (this fork)
+The UI is Japanese by default. Set `bin/data/settings/language.txt` to `en`
+for English. Translations live in `bin/data/lang/ja.json` (English text →
+Japanese); a string missing there shows in English. The Japanese font is
+BIZ UDPGothic (OFL, `bin/data/fonts/`). GUI fonts load through a small
+ofxSmartFont patch that both `scripts/setup-mac.sh` and the Windows CI apply.
+
 > **Skipping README imagery:** only `bin/data/` LFS assets are needed at
 > runtime. `setup-mac.sh` sets this for you; on Windows run once after cloning:
 > `git config lfs.fetchexclude "art/**"` then `git lfs pull`.

@@ -96,6 +96,13 @@ jobs:
           # no-op (the panels would silently regress to garbled text otherwise).
           grep -q 'ofVboMesh _m = ttf.getStringMesh' ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.cpp \
             || { echo "ERROR: ofxSmartFont ofVboMesh patch did not apply"; exit 1; }
+          # Route ofxSmartFont loads through the app's localization hook
+          # (src/Localization) so GUI and modal fonts get Japanese glyphs.
+          # Same patch as scripts/setup-mac.sh.
+          sed -i 's|^class ofxSmartFont {|ofTrueTypeFontSettings ofxSmartFontSettings(const std::string\& file, int size);\n\nclass ofxSmartFont {|' ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.h
+          sed -i 's/ttf\.load(mFile, mSize)/ttf.load(ofxSmartFontSettings(mFile, mSize))/' ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.h
+          grep -q 'ttf.load(ofxSmartFontSettings(mFile, mSize))' ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.h \
+            || { echo "ERROR: ofxSmartFont i18n patch did not apply"; exit 1; }
 
       - name: Configure Kinect SDK (vendored headers + import lib)
         shell: pwsh

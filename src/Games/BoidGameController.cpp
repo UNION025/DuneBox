@@ -21,8 +21,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 
 #include "BoidGameController.h"
+#include "../Localization/Localization.h"
 
 #include <string>
+
+using dunebox::i18n::tr;
+using dunebox::i18n::trLabel;
 //#include <direct.h>
 
 CBoidGameController::CBoidGameController()
@@ -56,11 +60,11 @@ void CBoidGameController::setup(std::shared_ptr<KinectProjector> const& k)
 	kinectProjector = k;
 
 	ofTrueTypeFont::setGlobalDpi(72);
-	if (!scoreFont.loadFont("verdana.ttf", 64))
+	if (!dunebox::i18n::loadFont(scoreFont, "verdana.ttf", 64))
 		std::cout << "Could not read font verdana.ttf" << std::endl;
-	if (!scoreFontSmall.loadFont("verdana.ttf", 32))
+	if (!dunebox::i18n::loadFont(scoreFontSmall, "verdana.ttf", 32))
 		std::cout << "Could not read font verdana.ttf" << std::endl;
-	if (!nameFont.loadFont("verdana.ttf", 128))
+	if (!dunebox::i18n::loadFont(nameFont, "verdana.ttf", 128))
 		std::cout << "Could not read font verdana.ttf" << std::endl;
 
 	// Vehicles
@@ -232,9 +236,9 @@ void CBoidGameController::DrawScoresOnFBO()
 	//	"Score: " + ofToString((int)(Player1Skins + Player1Food));
 
 	std::string P1ScoreStr = 
-		"Food: " + ofToString((int)Player1Food) + "\n" +
-		"Skins: " + ofToString((int)Player1Skins) + "\n" +
-		"Score: " + ofToString((int)(Player1Skins + Player1Food));
+		tr("Food: ") + ofToString((int)Player1Food) + "\n" +
+		tr("Skins: ") + ofToString((int)Player1Skins) + "\n" +
+		tr("Score: ") + ofToString((int)(Player1Skins + Player1Food));
 
 	double sW = scoreFontSmall.stringWidth(P1ScoreStr);
 	double sH = scoreFontSmall.stringHeight(P1ScoreStr);
@@ -246,9 +250,9 @@ void CBoidGameController::DrawScoresOnFBO()
 
 	//std::string P2ScoreStr = "P2: " + ofToString((int)Player2Score);
 	std::string P2ScoreStr = 
-		"Food: " + ofToString((int)Player2Food) + "\n" +
-		"Skins: " + ofToString((int)Player2Skins) + "\n" +
-		"Score: " + ofToString((int)(Player2Skins + Player2Food));
+		tr("Food: ") + ofToString((int)Player2Food) + "\n" +
+		tr("Skins: ") + ofToString((int)Player2Skins) + "\n" +
+		tr("Score: ") + ofToString((int)(Player2Skins + Player2Food));
 
 	//std::string P2ScoreStr = "Fish mass: " + ofToString((int)Player2Score) + "\n" +
 	//	"Food: " + ofToString((int)Player2Food) + "\n" +
@@ -286,7 +290,7 @@ void CBoidGameController::DrawFinalScoresOnFBO()
 	Player1Score = Player1Skins + Player1Food;
 	Player2Score = Player2Skins + Player2Food;
 
-	std::string scorestr = "You won!";
+	std::string scorestr = tr("You won!");
 	double sW = nameFont.stringWidth(scorestr);
 	double sH = nameFont.stringHeight(scorestr);
 
@@ -819,15 +823,15 @@ void CBoidGameController::drawMotherRabbit()
 void CBoidGameController::setupGui() {
 	// instantiate and position the gui //
 	gui = new ofxDatGui();
-	gui->addSlider("# of fish", 0, 200, fish.size())->setPrecision(0);
-	gui->addSlider("# of rabbits", 0, 50, rabbits.size())->setPrecision(0);
-	gui->addSlider("# of sharks", 0, 10, sharks.size())->setPrecision(0);
-	gui->addToggle("Mother fish", showMotherFish);
-	gui->addToggle("Mother rabbit", showMotherRabbit);
-	gui->addToggle("Draw flipped", doFlippedDrawing);
-	gui->addButton("Remove all animals");
+	trLabel(gui->addSlider("# of fish", 0, 200, fish.size()))->setPrecision(0);
+	trLabel(gui->addSlider("# of rabbits", 0, 50, rabbits.size()))->setPrecision(0);
+	trLabel(gui->addSlider("# of sharks", 0, 10, sharks.size()))->setPrecision(0);
+	trLabel(gui->addToggle("Mother fish", showMotherFish));
+	trLabel(gui->addToggle("Mother rabbit", showMotherRabbit));
+	trLabel(gui->addToggle("Draw flipped", doFlippedDrawing));
+	trLabel(gui->addButton("Remove all animals"));
 
-	gui->addHeader("Animals", false);
+	trLabel(gui->addHeader("Animals", false));
 
 	gui->onButtonEvent(this, &CBoidGameController::onButtonEvent);
 	gui->onToggleEvent(this, &CBoidGameController::onToggleEvent);

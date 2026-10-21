@@ -21,8 +21,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 
 #include "MapGameController.h"
+#include "../Localization/Localization.h"
 
 #include <string>
+
+using dunebox::i18n::tr;
 //#include <direct.h>
 
 CMapGameController::CMapGameController()
@@ -64,9 +67,9 @@ void CMapGameController::setup(std::shared_ptr<KinectProjector> const& k)
 	kinectProjector = k;
 
 	ofTrueTypeFont::setGlobalDpi(72);
-	if (!scoreFont.loadFont("verdana.ttf", 64))
+	if (!dunebox::i18n::loadFont(scoreFont, "verdana.ttf", 64))
 		std::cout << "Could not read font verdana.ttf" << std::endl;
-	if (!nameFont.loadFont("verdana.ttf", 128))
+	if (!dunebox::i18n::loadFont(nameFont, "verdana.ttf", 128))
 		std::cout << "Could not read font verdana.ttf" << std::endl;
 
 	//if (!nameFont.loadFont("cooperBlack.ttf", 64))
@@ -189,7 +192,7 @@ void CMapGameController::PlayAndShowCountDown(int resultTime)
 
 	if (timeleft < 4)
 	{
-		std::string warningString = "Hands Off!";
+		std::string warningString = tr("Hands Off!");
 		double sW = nameFont.stringWidth(warningString);
 		double sH = nameFont.stringHeight(warningString);
 
@@ -302,7 +305,7 @@ bool  CMapGameController::InitiateGameSequence()
 			fboProjWindow.begin();
 			ofClear(255, 255, 255, 0);
 			ofSetColor(255, 255, 255);
-			nameFont.drawString("No Island Found!", 100, projRes.y / 2);
+			nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
 			fboProjWindow.end();
 		}
 		std::cout << "Intermediate result shown" << std::endl;
@@ -314,7 +317,7 @@ bool  CMapGameController::InitiateGameSequence()
 			fboProjWindow.begin();
 			ofClear(255, 255, 255, 0);
 			ofSetColor(255, 255, 255);
-			nameFont.drawString("No Island Found!", 100, projRes.y / 2);
+			nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
 			fboProjWindow.end();
 		}
 		std::cout << "Final result shown" << std::endl;
@@ -365,7 +368,7 @@ bool CMapGameController::CheckForIsland()
 		ofClear(255, 255, 255, 0);
 //		ofBackground(255);
 
-		std::string warningString = "No Island Found!";
+		std::string warningString = tr("No Island Found!");
 		double sW = nameFont.stringWidth(warningString);
 		double sH = nameFont.stringHeight(warningString);
 
@@ -435,11 +438,11 @@ bool CMapGameController::CreateWelcomeScreen()
 
 	if (!isThereHighScore)
 	{
-		HScoreText = "No High-Score";
+		HScoreText = tr("No High-Score");
 	}
 	else
 	{
-		HScoreText = "High-Score: " + ofToString(currentHScore);
+		HScoreText = tr("High-Score: ") + ofToString(currentHScore);
 	}
 	bool DrawRefImage = false;
 
@@ -508,7 +511,7 @@ bool CMapGameController::CreateWelcomeScreen()
 	//ofSetColor(255, 255, 255);
 //	nameFont.drawString(RefMapName, 200, projRes.y / 2);
 
-	std::string mapString = "Now Shape:";
+	std::string mapString = tr("Now Shape:");
 	double sW = nameFont.stringWidth(mapString);
 	double sH = nameFont.stringHeight(mapString);
 
@@ -637,7 +640,7 @@ bool CMapGameController::ButtonPressed()
 				fboProjWindow.begin();
 				ofClear(255, 255, 255, 0);
 				ofSetColor(255, 255, 255);
-				nameFont.drawString("No Island Found!", 100, projRes.y / 2);
+				nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
 				fboProjWindow.end();
 			}
 
@@ -1702,9 +1705,9 @@ bool CMapGameController::CreateScoreTexts(bool intermediate)
 	std::stringstream ttext;
 	int tscore = (int)Score;
 	if (intermediate)
-		ttext << RefMapName + " Current Score: " << tscore;
+		ttext << RefMapName + tr(" Current Score: ") << tscore;
 	else
-		ttext << RefMapName + " Final Score: " << tscore;
+		ttext << RefMapName + tr(" Final Score: ") << tscore;
 	ScoreText = ttext.str();
 
 	HiScoreText = "";
@@ -1733,14 +1736,14 @@ bool CMapGameController::CreateScoreTexts(bool intermediate)
 
 		if (isHighScore)
 		{
-			HScoreText << "New High-Score! Great Job!";
+			HScoreText << tr("New High-Score! Great Job!");
 		}
 		else
 		{
 			int currentHScore;
 			std::string fname;
 			scoreTrackers[actRef].getHighScore(currentHScore, fname);
-			HScoreText << RefMapName + " High-Score: " << currentHScore;
+			HScoreText << RefMapName + tr(" High-Score: ") << currentHScore;
 		}
 		HiScoreText = HScoreText.str();
 	}

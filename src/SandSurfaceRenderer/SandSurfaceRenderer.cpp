@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ***********************************************************************/
 
 #include "SandSurfaceRenderer.h"
+#include "../Localization/Localization.h"
+
+using dunebox::i18n::tr;
+using dunebox::i18n::trLabel;
 
 using namespace ofxCSG;
 
@@ -324,25 +328,25 @@ void SandSurfaceRenderer::setupGui(){
     
     // instantiate the gui //
     gui2 = new ofxDatGui( ofxDatGuiAnchor::TOP_LEFT );
-    gui2->addHeader("Display", false);
-    gui2->addToggle("Contour lines", drawContourLines);
-    gui2->addSlider("Contour spacing", 1, 30, contourLineDistance)->setName("Contour lines distance");
-    gui2->addDropdown("Color map", colorMapFilesList)->setName("Load Color Map");
+    trLabel(gui2->addHeader("Display", false));
+    trLabel(gui2->addToggle("Contour lines", drawContourLines));
+    trLabel(gui2->addSlider("Contour spacing", 1, 30, contourLineDistance))->setName("Contour lines distance");
+    trLabel(gui2->addDropdown("Color map", colorMapFilesList))->setName("Load Color Map");
 
     gui = new ofxDatGui( ofxDatGuiAnchor::NO_ANCHOR );
     gui->setPosition(gui2->getPosition().x, gui2->getPosition().y+gui2->getHeight()+30);
-    gui->addButton("Revert to saved color map")->setName("Reset colors");
-    gui->addButton("Save color map")->setName("Save");
-    gui->addToggle("Edit color map", editColorMap)->setName("Edit");
+    trLabel(gui->addButton("Revert to saved color map"))->setName("Reset colors");
+    trLabel(gui->addButton("Save color map"))->setName("Save");
+    trLabel(gui->addToggle("Edit color map", editColorMap))->setName("Edit");
 
     gui3 = new ofxDatGui( ofxDatGuiAnchor::NO_ANCHOR );
-    gui3->addSlider("Height", -300, 300, 0)->setName("Height");
+    trLabel(gui3->addSlider("Height", -300, 300, 0))->setName("Height");
     gui3->addColorPicker("ColorPicker", ofColor::black);
-    gui3->addButton("Undo color change")->setName("Undo");
-    gui3->addButton("Move color up")->setName("Move up");
-    gui3->addButton("Move color down")->setName("Move down");
-    gui3->addButton("Insert new color after current color");
-    gui3->addButton("Remove color");
+    trLabel(gui3->addButton("Undo color change"))->setName("Undo");
+    trLabel(gui3->addButton("Move color up"))->setName("Move up");
+    trLabel(gui3->addButton("Move color down"))->setName("Move down");
+    trLabel(gui3->addButton("Insert new color after current color"));
+    trLabel(gui3->addButton("Remove color"));
     
     // once the gui has been assembled, register callbacks to listen for component specific events //
     gui2->onToggleEvent(this, &SandSurfaceRenderer::onToggleEvent);
@@ -387,7 +391,7 @@ void SandSurfaceRenderer::populateColorList(){
         int j = heightMap.size()-1-i;
         colorList->add("color");
         updateColorListColor(i, j);
-        colorList->get(i)->setLabel("Height: "+ofToString(heightMap[j].height));
+        colorList->get(i)->setLabel(tr("Height: ")+ofToString(heightMap[j].height));
     }
     //Initiate color controls
     selectedColor = 0;
@@ -412,7 +416,7 @@ void SandSurfaceRenderer::onButtonEvent(ofxDatGuiButtonEvent e){
         float newheight = (j > 0) ? (heightMap[j-1].height+heightMap[j].height)/2 : heightMap[j].height+1;
         colorList->add("color");
         updateColorListColor(i, j);
-        colorList->get(i)->setLabel("Height: "+ofToString(newheight));
+        colorList->get(i)->setLabel(tr("Height: ")+ofToString(newheight));
         colorList->move(i,selectedColor+1);
         heightMap.addKey(heightMap[j].color, newheight);
         onScrollViewEvent(ofxDatGuiScrollViewEvent(colorList, colorList->get(selectedColor+1), selectedColor+1));
@@ -479,7 +483,7 @@ void SandSurfaceRenderer::onSliderEvent(ofxDatGuiSliderEvent e){
         int i = selectedColor;
         int j = heightMap.size()-1-i;
         heightMap.setHeightKey(j, e.value);
-        colorList->get(i)->setLabel("Height: "+ofToString(e.value));
+        colorList->get(i)->setLabel(tr("Height: ")+ofToString(e.value));
     }
 }
 

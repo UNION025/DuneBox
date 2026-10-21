@@ -68,5 +68,13 @@ grep -q 'ofVboMesh _m = ttf.getStringMesh' "$SF" || {
 	perl -pi -e 's/ttf\.drawString\(s, x, y\);/ofVboMesh _m = ttf.getStringMesh(s, x, y); const ofTexture& _t = ttf.getFontTexture(); _t.bind(); _m.draw(OF_MESH_FILL); _t.unbind();/' "$SF"
 }
 grep -q 'ofVboMesh _m = ttf.getStringMesh' "$SF" || { echo "ERROR: ofxSmartFont patch did not apply"; exit 1; }
+# Route ofxSmartFont loads through the app's localization hook
+# (src/Localization) so GUI and modal fonts get Japanese glyphs.
+SH="$DG/libs/ofxSmartFont/ofxSmartFont.h"
+grep -q 'ofxSmartFontSettings' "$SH" || {
+	perl -pi -e 's|^class ofxSmartFont \{|ofTrueTypeFontSettings ofxSmartFontSettings(const std::string& file, int size);\n\nclass ofxSmartFont {|' "$SH"
+	perl -pi -e 's/ttf\.load\(mFile, mSize\)/ttf.load(ofxSmartFontSettings(mFile, mSize))/' "$SH"
+}
+grep -q 'ttf.load(ofxSmartFontSettings(mFile, mSize))' "$SH" || { echo "ERROR: ofxSmartFont i18n patch did not apply"; exit 1; }
 
 echo "==> done. Build with:  cd \"$REPO\" && make -j8 OF_ROOT=\"$(cd "$OF_ROOT" && pwd)\""

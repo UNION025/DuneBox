@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "ofMain.h"
 #include "ofApp.h"
+#include "Localization/Localization.h"
 
 // Direct GLFW access for multi-monitor enumeration. OF bundles GLFW; define
 // GLFW_INCLUDE_NONE so it doesn't pull in its own GL headers (OF already does).
@@ -118,7 +119,7 @@ int main() {
 		// draggable, decorated window offset from the main GUI so it does
 		// not overlay it as a confusing blank window.
 		settings.decorated = true;
-		settings.title = "DuneBox Projector Output (drag to your projector)";
+		settings.title = dunebox::i18n::tr("DuneBox Projector Output (drag to your projector)");
 		settings.setPosition(ofVec2f(60, 60));
 	}
 	settings.shareContextWith = mainWindow;
