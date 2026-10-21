@@ -148,6 +148,13 @@ OpenFrameworks' projectGenerator.
 ./scripts/setup-mac.sh   # OF 0.12.0 -> ../openFrameworks, pinned addons, LFS assets
 make -j8 && open bin/DuneBox.app
 ```
+To hand the app to a Mac without build tools (Intel or Apple Silicon):
+```bash
+./scripts/build-mac-universal.sh   # -> dist/DuneBox (app + data + Japanese manual)
+```
+Copy the whole `dist/DuneBox` folder; the app reads `data/` next to it. When
+started from Finder it logs to `data/DebugFiles/dunebox.log`.
+
 macOS tops out at OpenGL 4.1, so water runs on the fragment-shader path.
 Kinect v1 (`kinectVersion` 1) works through ofxKinect / libfreenect.
 

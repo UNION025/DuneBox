@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "ofApp.h"
 #include "DuneBoxGuiTheme.h"
 #include "Localization/Localization.h"
+#include "LogFile.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -101,7 +102,11 @@ void ofApp::setup() {
 	terrainSettings.maxFilter = GL_LINEAR;
 	terrainSettings.useDepth = false;
 	testTerrainFbo.allocate(terrainSettings);
-	kinectTerrainFbo.allocate(terrainSettings);
+	// Unsigned-normalised, so 1 - depth is clamped to [0,1] on write: depth
+	// outside the colour-map range (no data, hands) can't become a spike or pit.
+	ofFboSettings kinectTerrainSettings = terrainSettings;
+	kinectTerrainSettings.internalformat = GL_RGBA16;
+	kinectTerrainFbo.allocate(kinectTerrainSettings);
 	generateTestTerrain();
 	setupWaterGui();
 
@@ -121,6 +126,8 @@ void ofApp::setup() {
 
 
 void ofApp::update() {
+	if (ofGetFrameNum() % 600 == 0) dunebox::logfile::rotateIfLarge();
+
     // Call kinectProjector->update() first during the update function()
 	kinectProjector->update();
    	sandSurfaceRenderer->update();
@@ -968,6 +975,7 @@ void ofApp::drawWaterOnSand() {
 	float sy = water.getHeight() / kinectRes.y;
 	int cols = (int)(roi.width / step) + 1;
 	int rows = (int)(roi.height / step) + 1;
+	float seaDepth = kinectProjector->getBasePlaneOffset().z;
 
 	waterSandMesh.clear();
 	waterSandMesh.setMode(OF_PRIMITIVE_TRIANGLES);
@@ -975,7 +983,12 @@ void ofApp::drawWaterOnSand() {
 		for (int c = 0; c < cols; ++c) {
 			float kx = std::min(roi.x + c * step, roi.getRight() - 1);
 			float ky = std::min(roi.y + r * step, roi.getBottom() - 1);
+			// Where the Kinect has no depth (shadows, edges) the projection
+			// would fling the vertex across the screen; put it at sea level.
+			float elev = kinectProjector->elevationAtKinectCoord(kx, ky);
 			ofVec2f p = kinectProjector->kinectCoordToProjCoord(kx, ky);
+			if (!(elev > -300.0f && elev < 400.0f) || !std::isfinite(p.x) || !std::isfinite(p.y))
+				p = kinectProjector->kinectCoordToProjCoord(kx, ky, seaDepth);
 			waterSandMesh.addVertex(ofVec3f(p.x, p.y, 0));
 			waterSandMesh.addTexCoord(water.getCoordFromPoint(kx * sx, ky * sy));
 		}

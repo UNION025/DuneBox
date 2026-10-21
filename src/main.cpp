@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "ofMain.h"
 #include "ofApp.h"
 #include "Localization/Localization.h"
+#include "LogFile.h"
 
 // Direct GLFW access for multi-monitor enumeration. OF bundles GLFW; define
 // GLFW_INCLUDE_NONE so it doesn't pull in its own GL headers (OF already does).
@@ -65,31 +66,10 @@ bool setWindowDimensions(ofGLFWWindowSettings& settings, int windowsNum) {
 
 }
 
-#ifndef _WIN32
-#include <unistd.h>
-#include <cstdio>
-
-// Launched from Finder there is no terminal, so stdout/stderr (OF logs,
-// libfreenect's USB messages, calibration output) would be lost. Send them to
-// data/DebugFiles/dunebox.log, keeping the previous run as dunebox-prev.log.
-static void logToFileUnlessTerminal() {
-	if (isatty(STDOUT_FILENO)) return;
-	std::string dir = ofToDataPath("DebugFiles", true);
-	ofDirectory::createDirectory(dir, false, true);
-	std::string log = ofFilePath::join(dir, "dunebox.log");
-	std::rename(log.c_str(), ofFilePath::join(dir, "dunebox-prev.log").c_str());
-	if (std::freopen(log.c_str(), "w", stdout)) {
-		setvbuf(stdout, nullptr, _IOLBF, 0);
-		dup2(fileno(stdout), STDERR_FILENO);
-	}
-}
-#endif
 
 //========================================================================
 int main() {
-#ifndef _WIN32
-	logToFileUnlessTerminal();
-#endif
+	dunebox::logfile::startUnlessTerminal();
 	ofGLFWWindowSettings settings;
 
 	// Try GL 4.3 first (needed for compute shaders in water simulation).

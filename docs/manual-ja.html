@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DuneBox 設定マニュアル</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --fg: #1f2328; --muted: #5d646d; --line: #e3e0d8;
+    --card: #ffffff; --accent: #1f6f5c; --warn-bg: #fff6e0; --warn-line: #e8c46a;
+    --note-bg: #eef5f2; --code-bg: #f1efe9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17191c; --fg: #e6e6e3; --muted: #a2a8ae; --line: #30343a;
+      --card: #1e2125; --accent: #6cc3a8; --warn-bg: #2f2817; --warn-line: #8a6d24;
+      --note-bg: #1b2a25; --code-bg: #262a2f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    line-height: 1.75; font-size: 16px;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  h2 { font-size: 1.3rem; margin: 44px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+  ol, ul { padding-left: 1.4em; }
+  li { margin: 4px 0; }
+  code, kbd {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em;
+    background: var(--code-bg); border-radius: 4px; padding: 1px 6px;
+  }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  .box { border-radius: 8px; padding: 12px 16px; margin: 16px 0; border: 1px solid var(--line); }
+  .warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .note { background: var(--note-bg); }
+  .box p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; background: var(--card); }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; white-space: nowrap; }
+  nav.toc { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 20px; }
+  nav.toc ol { margin: 0; }
+  a { color: var(--accent); }
+  .step { font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>DuneBox 設定マニュアル</h1>
+<p class="sub">砂場 AR サンドボックス ／ MacBook Pro（M1 Max）向け ／ 2026年10月21日 第2版</p>
+
+<div class="box note">
+  <p>このマニュアルは、プログラミングの知識がなくても DuneBox を設置して動かせるように書いています。上から順番に進めてください。</p>
+</div>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#prepare">用意するもの</a></li>
+    <li><a href="#install">Mac へのコピー（インストール）</a></li>
+    <li><a href="#connect">機材の接続</a></li>
+    <li><a href="#launch">起動する</a></li>
+    <li><a href="#calib">キャリブレーション（必要なときだけ）</a></li>
+    <li><a href="#play">遊び方と操作</a></li>
+    <li><a href="#quit">終了のしかた（重要）</a></li>
+    <li><a href="#trouble">困ったとき</a></li>
+    <li><a href="#alpha">このバージョンの注意点</a></li>
+  </ol>
+</nav>
+
+<h2 id="prepare">1. 用意するもの</h2>
+<table>
+  <tr><th>機材</th><th>メモ</th></tr>
+  <tr><td>MacBook Pro（M1 Max）</td><td>Intel の Mac でも同じ手順で動きます。</td></tr>
+  <tr><td>Kinect v1（Xbox 360 用）</td><td><strong>専用の電源アダプタが必須</strong>です。USB だけでは動きません。</td></tr>
+  <tr><td>プロジェクター</td><td>HDMI でつなぎます。砂箱の真上か斜め上から投影します。</td></tr>
+  <tr><td>USB-C の変換アダプタ</td><td>HDMI 用と Kinect 用を<strong>別々のポート</strong>につなげるようにしてください（理由は「困ったとき」を参照）。</td></tr>
+  <tr><td>USB 2.0 ハブ（M1 Mac の場合）</td><td>M1 Mac では、Kinect を <strong>USB 2.0 のハブを通してつなぐと安定</strong>します。直接つなぐと映像が届かないことがありました。</td></tr>
+  <tr><td>砂箱と砂</td><td>砂の厚さは 10cm 以上あると遊びやすくなります。</td></tr>
+  <tr><td>平らな板（段ボールなど）</td><td>キャリブレーションのときに砂箱の上に載せます。</td></tr>
+</table>
+
+<h2 id="install">2. Mac へのコピー（インストール）</h2>
+<ol>
+  <li>USB メモリを Mac に挿します。</li>
+  <li>USB メモリの中にある <code>DuneBox</code> フォルダを、<strong>フォルダごと</strong>デスクトップにドラッグしてコピーします。</li>
+  <li>コピーが終わったら USB メモリは外して構いません。</li>
+</ol>
+<div class="box warn">
+  <p><strong>フォルダの中身をバラバラにしないでください。</strong> <code>DuneBox.app</code> は、同じフォルダにある <code>data</code> フォルダを読み込んで動きます。<code>DuneBox.app</code> だけを「アプリケーション」フォルダに移すと起動しません。</p>
+</div>
+<p>デスクトップの <code>DuneBox</code> フォルダの中身はこうなっていれば正しいです。</p>
+<pre><code>DuneBox/
+├── DuneBox.app        ← アプリ本体
+├── data/              ← 画像・設定・キャリブレーション結果
+└── はじめにお読みください.html（このファイル）</code></pre>
+
+<h2 id="connect">3. 機材の接続</h2>
+<p>次の順番でつなぐと確実です。</p>
+<ol>
+  <li><span class="step">プロジェクターを Mac につなぐ。</span></li>
+  <li><span class="step">画面を「拡張」にする。</span> 「システム設定」→「ディスプレイ」を開き、プロジェクターが<strong>ミラーリングではなく、別の画面（拡張）</strong>になっていることを確認します。</li>
+  <li><span class="step">Kinect の電源アダプタをコンセントにつなぐ。</span></li>
+  <li><span class="step">Kinect の USB を Mac につなぐ。</span> プロジェクターとは<strong>別の USB-C ポート（または別のアダプタ）</strong>につないでください。M1 Mac では <strong>USB 2.0 ハブ経由</strong>にします。</li>
+</ol>
+<div class="box note">
+  <p>今回同梱しているキャリブレーション結果は、Kinect から砂の表面まで約 74cm の配置で取ったものです。Kinect・プロジェクター・砂箱の位置を変えていなければ、そのまま使えます。</p>
+</div>
+
+<h2 id="launch">4. 起動する</h2>
+<h3>はじめて起動するとき</h3>
+<ol>
+  <li>デスクトップの <code>DuneBox</code> フォルダを開きます。</li>
+  <li><code>DuneBox.app</code> を<strong>右クリック（または control + クリック）して「開く」</strong>を選びます。</li>
+  <li>「開発元を確認できません」などの確認が出たら、もう一度「開く」を押します。</li>
+</ol>
+<div class="box warn">
+  <p><strong>「開けません」と出て、「開く」ボタンがない場合</strong></p>
+  <p>「システム設定」→「プライバシーとセキュリティ」を開き、下の方にある DuneBox の「このまま開く」を押してください。2回目からは普通にダブルクリックで起動できます。</p>
+</div>
+
+<h3>起動すると</h3>
+<ul>
+  <li><strong>Mac の画面</strong>に操作用の画面（右上に「DuneBox 設定」、左下に「状態」パネル）が出ます。</li>
+  <li><strong>プロジェクター</strong>に投影用の画面が全画面で出ます。</li>
+  <li>左下の「状態」パネルがすべて緑なら準備完了です。<kbd>Space</kbd> キーを押すと砂に地形が映ります。</li>
+</ul>
+<table>
+  <tr><th>「状態」パネルの表示</th><th>意味とやること</th></tr>
+  <tr><td>深度カメラ：接続済み（緑）</td><td>Kinect がつながっています。</td></tr>
+  <tr><td>深度カメラ：見つかりません（赤）</td><td>Kinect の電源と USB を確認してください。「困ったとき」も参照。</td></tr>
+  <tr><td>砂の範囲・海面の高さ・プロジェクターが「未設定」「未調整」</td><td>キャリブレーションが必要です。次の章へ。</td></tr>
+</table>
+
+<h2 id="calib">5. キャリブレーション（必要なときだけ）</h2>
+<p>Kinect とプロジェクターの位置を合わせる作業です。まず、次のどちらに当てはまるかを確認してください。</p>
+
+<h3>A. Kinect・プロジェクター・砂箱の位置を動かしていない場合</h3>
+<p>「2. プロジェクターを調整」は<strong>やらなくて大丈夫</strong>です。同梱のキャリブレーション結果がそのまま使えます。</p>
+<ol>
+  <li><span class="step">右上パネルの「1. 砂の範囲を指定」を押す。</span> Kinect の映像が出るので、<strong>砂箱の内側を左上から右下までドラッグ</strong>します（クリックだけではダメです）。緑の四角が砂箱の内側に収まれば OK です。</li>
+  <li><span class="step"><kbd>Space</kbd> を押す。</span> 砂に地形が映れば完了です。</li>
+</ol>
+
+<h3>B. 位置を動かした場合、または投影が砂とずれている場合</h3>
+<p>全部で 5〜15 分ほどかかります。</p>
+<ol>
+  <li><span class="step">Kinect を 20〜30 分ほど電源を入れたままにしておく。</span> 温まるまで測定が少しずれるためです。</li>
+  <li><span class="step">「1. 砂の範囲を指定」で、砂箱の内側をドラッグする。</span>（A の 1 と同じ）</li>
+  <li><span class="step">砂を平らにならす。</span> 手のひらで軽くなでて、表面をなめらかにします。</li>
+  <li><span class="step">「2. プロジェクターを調整」を押す。</span> 「砂の表面を平らにしてください」と出たら、<strong>OK を 1 回だけ</strong>押します。</li>
+  <li><span class="step">あとは何も触らずに待つ。</span> 砂の上に白黒の市松模様が映り、場所を変えながら自動で 5 回測ります。</li>
+  <li><span class="step">「砂箱を板で覆って OK を押してください」と出たら、</span>平らな板を砂箱の上に載せて OK を押します。また 5 回測ります。</li>
+  <li><span class="step">「キャリブレーション成功」と出たら完了です。</span> 板を外して <kbd>Space</kbd> を押してください。</li>
+</ol>
+<div class="box warn">
+  <p><strong>キャリブレーション中は、パネルのボタンを押さないでください。</strong> 押せないボタンは灰色になります。途中でやめたいときは「<strong>キャリブレーションを中止</strong>」を押してください。</p>
+  <p>「範囲を調整結果に合わせる」は、キャリブレーションが成功した後でだけ使えます。普段は押す必要はありません。</p>
+</div>
+<div class="box note">
+  <p><strong>模様がなかなか見つからなくても、そのまま待ってください。</strong> 見つからないと模様を少しずつ中央に寄せながら何度もやり直します。1 か所に数分かかることがありますが、止まっているわけではありません。手や体を砂箱の上に入れないでください。部屋を少し暗くすると早く終わります。</p>
+  <p>10 分以上まったく進まないときは、プロジェクターの光（白い画面や市松模様）が砂に当たっているかを確認してください。</p>
+</div>
+
+<h2 id="play">6. 遊び方と操作</h2>
+<p>砂を手で盛ったり掘ったりすると、高さに合わせて色と等高線が変わります。高いところは茶色、低いところは青（海）になります。</p>
+
+<h3>「水」パネル（左側。サンドボックス開始後に出ます）</h3>
+<table>
+  <tr><th>項目</th><th>はたらき</th></tr>
+  <tr><td>水シミュレーション（W）</td><td>水を流す機能のオン・オフ。</td></tr>
+  <tr><td>山頂から川を流す（K）</td><td>いちばん高い山のてっぺんから水がわき出し、低いほうへ流れます。山を作り直すと、約 1 秒後に水源も新しい頂上へ移ります。指で溝を掘ると、水がそこを流れます。</td></tr>
+  <tr><td>川の水量</td><td>右に動かすほど水が多く出ます。</td></tr>
+  <tr><td>手をかざすと雨</td><td>砂の上に手をかざすと、その下に雨が降ります。</td></tr>
+  <tr><td>水を消す（X）</td><td>たまった水をすべて消します。</td></tr>
+</table>
+
+<h3>キーボード操作</h3>
+<table>
+  <tr><th>キー</th><th>動作</th></tr>
+  <tr><td><kbd>Space</kbd></td><td>サンドボックスを開始</td></tr>
+  <tr><td><kbd>W</kbd></td><td>水シミュレーションのオン・オフ</td></tr>
+  <tr><td><kbd>K</kbd></td><td>山頂から川を流す、のオン・オフ</td></tr>
+  <tr><td><kbd>X</kbd></td><td>水を消す</td></tr>
+  <tr><td><kbd>L</kbd></td><td>溶岩モード</td></tr>
+  <tr><td><kbd>V</kbd></td><td>火山を噴火させる</td></tr>
+  <tr><td><kbd>T</kbd></td><td>色のテーマを切り替え（地形図・海・火山・氷河期・異星）</td></tr>
+  <tr><td><kbd>N</kbd></td><td>昼と夜の切り替え</td></tr>
+  <tr><td><kbd>F</kbd></td><td>魚のゲームを開始</td></tr>
+  <tr><td><kbd>1</kbd>〜<kbd>4</kbd></td><td>動物ゲームを難しさ 1〜4 で開始</td></tr>
+</table>
+<p>キー操作は、Mac の画面（操作用ウィンドウ）をクリックしてから行ってください。</p>
+
+<h2 id="quit">7. 終了のしかた（重要）</h2>
+<div class="box warn">
+  <p><strong>必ず <kbd>command</kbd> + <kbd>Q</kbd> か、ウィンドウを閉じて終了してください。</strong></p>
+  <p>このとき設定が保存されます。「強制終了」や電源を切っての終了では、その回に変えた設定が保存されないことがあります。</p>
+</div>
+
+<h2 id="trouble">8. 困ったとき</h2>
+<table>
+  <tr><th>症状</th><th>やること</th></tr>
+  <tr>
+    <td>「深度カメラ：見つかりません」</td>
+    <td>
+      <ol>
+        <li>Kinect の電源アダプタがコンセントに入っているか確認します。</li>
+        <li>USB を挿し直します。</li>
+        <li><strong>DuneBox が 2 つ起動していないか</strong>確認します（Dock に 2 つ並んでいないか）。2 つあると Kinect を取り合ってつながりません。全部終了してから 1 つだけ起動し直してください。</li>
+      </ol>
+    </td>
+  </tr>
+  <tr><td>Kinect を抜き挿ししたらつながらなくなった</td><td>DuneBox を <kbd>command</kbd> + <kbd>Q</kbd> で終了し、起動し直してください。</td></tr>
+  <tr><td>動きがカクカクする／「センサーの更新率」が低い</td><td>Kinect をプロジェクター（HDMI）と同じアダプタにつないでいると遅くなることがあります。別のポートにつなぎ替えてください。ほかの重いアプリも終了してください。</td></tr>
+  <tr><td>プロジェクターに何も映らない</td><td>ディスプレイ設定が「ミラーリング」になっていないか確認します。DuneBox を起動した後でプロジェクターをつないだ場合は、DuneBox を起動し直してください。</td></tr>
+  <tr><td>投影された色が砂とずれている</td><td>キャリブレーションをやり直してください（5章の B）。</td></tr>
+  <tr><td>「砂の表面を平らにしてください」が何度も出る</td><td>OK の後にパネルのボタンを押すと、最初からやり直しになります。OK を 1 回押したら、何も触らずに待ってください。</td></tr>
+  <tr><td>Space を押したらカメラ映像が消えた</td><td>正常です。開始すると、カメラ映像の代わりに砂の地図が表示されます。地図が小さい・ずれているときは「1. 砂の範囲を指定」からやり直してください。</td></tr>
+  <tr><td>水が山の上にたまる、変な方向に流れる、砂とずれて映る</td><td>水の機能はこの版で新しく作り直したもので、Kinect の実機でまだ試していません。<kbd>X</kbd> で水を消して、どう見えたかを開発担当に伝えてください（スマホで投影の写真を撮ってもらえると助かります）。</td></tr>
+  <tr><td>英語の表示にしたい</td><td><code>data/settings/language.txt</code> をテキストエディットで開き、<code>ja</code> を <code>en</code> に書き換えて保存し、起動し直します。</td></tr>
+</table>
+
+<h3>開発担当にログを渡すとき</h3>
+<p>DuneBox は動作の記録（ログ）を自動で <code>data/DebugFiles/dunebox.log</code> に書き出しています（1 回前の分は <code>dunebox-prev.log</code>）。問題が起きたら、DuneBox を終了してから、この 2 つのファイルを USB メモリなどで渡してください。</p>
+
+<h3>設定のバックアップ</h3>
+<p>キャリブレーション結果は <code>data/settings</code> フォルダに入っています。うまく動いている状態のときに、このフォルダをどこかにコピーしておくと、困ったときに戻せます。</p>
+
+<h2 id="alpha">9. このバージョンの注意点</h2>
+<ul>
+  <li><strong>M1 Max（Apple Silicon）</strong>では、起動と Kinect の接続（USB 2.0 ハブ経由）を確認しています。キャリブレーションの成功はまだ確認できていません。</li>
+  <li><strong>水の機能（山頂から川、水の向きと位置の修正）は、Kinect の実機ではまだ試していません。</strong></li>
+  <li>うまくいかなかったときは、何をしたときに、画面に何が出たかを伝えてください。</li>
+</ul>
+<p class="sub">開発者向け：ソースコードは GitHub の UNION025/DuneBox にあります。Intel と Apple Silicon の両対応版で、ビルドしたコミットと日時は <code>data/BUILD.txt</code> に書いてあります。作り方は <code>scripts/build-mac-universal.sh</code> を参照してください。</p>
+
+</main>
+</body>
+</html>
