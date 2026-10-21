@@ -70,8 +70,15 @@ int main() {
 
 	// Try GL 4.3 first (needed for compute shaders in water simulation).
 	// If the driver/hardware doesn't support it, fall back to GL 3.2.
+	// macOS tops out at GL 4.1, and a failed ofCreateWindow() leaves a dead
+	// window registered in the main loop (crash), so go straight to 3.2 there.
+#ifdef __APPLE__
+	bool useGL43 = false;
+	settings.setGLVersion(3, 2);
+#else
 	bool useGL43 = true;
 	settings.setGLVersion(4, 3);
+#endif
 	settings.setSize(1600, 800);
 	settings.setPosition(ofVec2f(0, 0));
 	settings.resizable = true;
@@ -85,7 +92,9 @@ int main() {
 		mainWindow = nullptr;
 	}
 
-	if (!mainWindow || mainWindow->getWindowSize().x == 0) {
+	if (!useGL43) {
+		// already created at GL 3.2 (macOS)
+	} else if (!mainWindow || mainWindow->getWindowSize().x == 0) {
 		// GL 4.3 failed - fall back to GL 3.2
 		ofLogNotice("main") << "GL 4.3 not available, falling back to GL 3.2";
 		useGL43 = false;

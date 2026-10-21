@@ -1,5 +1,5 @@
 <KINECTSETTINGS>
-	<kinectVersion>2</kinectVersion>
+	<kinectVersion>1</kinectVersion>
 	<kinectROI>112, 160, 0, 377, 271</kinectROI>
 	<basePlaneNormalBack>-0.0019748, 0.14418, 0.989549</basePlaneNormalBack>
 	<basePlaneOffsetBack>0, 0, 869.055</basePlaneOffsetBack>

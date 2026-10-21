@@ -61,17 +61,17 @@ void WaterSimulation::setup(int width, int height) {
     ofLogNotice("WaterSimulation") << "Setting up " << simWidth << "x" << simHeight << " simulation grid";
 
     // --- Load shaders ---
-    string vp = SHADER_PATH + "passthrough";
+    string vp = SHADER_PATH + "passthrough.vert";
 
-    bathymetryUpdateShader.load(vp, SHADER_PATH + "BathymetryUpdate");
-    slopeFluxDerivShader.load(vp, SHADER_PATH + "SlopeFluxDeriv");
-    eulerStepShader.load(vp, SHADER_PATH + "EulerStep");
-    rungeKuttaStepShader.load(vp, SHADER_PATH + "RungeKuttaStep");
-    boundaryShader.load(vp, SHADER_PATH + "Boundary");
-    waterAddShader.load(SHADER_PATH + "WaterAdd", SHADER_PATH + "WaterAdd");
-    waterUpdateShader.load(vp, SHADER_PATH + "WaterUpdate");
-    waterRenderShader.load(SHADER_PATH + "WaterRender", SHADER_PATH + "WaterRender");
-    if (!erosionShader.load(vp, SHADER_PATH + "Erosion")) {
+    bathymetryUpdateShader.load(vp, SHADER_PATH + "BathymetryUpdate.frag");
+    slopeFluxDerivShader.load(vp, SHADER_PATH + "SlopeFluxDeriv.frag");
+    eulerStepShader.load(vp, SHADER_PATH + "EulerStep.frag");
+    rungeKuttaStepShader.load(vp, SHADER_PATH + "RungeKuttaStep.frag");
+    boundaryShader.load(vp, SHADER_PATH + "Boundary.frag");
+    waterAddShader.load(SHADER_PATH + "WaterAdd.vert", SHADER_PATH + "WaterAdd.frag");
+    waterUpdateShader.load(vp, SHADER_PATH + "WaterUpdate.frag");
+    waterRenderShader.load(SHADER_PATH + "WaterRender.vert", SHADER_PATH + "WaterRender.frag");
+    if (!erosionShader.load(vp, SHADER_PATH + "Erosion.frag")) {
         ofLogWarning("WaterSimulation") << "Erosion shader failed to load - erosion view unavailable";
     }
 

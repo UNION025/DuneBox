@@ -23,3 +23,8 @@ bin/Magic-Sand.exp
 bin/Magic-Sand.lib
 bin/*.exp
 bin/*.lib
+
+# macOS make build
+bin/DuneBox.app/
+bin/DuneBox_debug.app/
+openFrameworks-Info.plist
