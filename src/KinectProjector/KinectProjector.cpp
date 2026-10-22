@@ -2211,29 +2211,34 @@ bool KinectProjector::getBinaryLandImage(ofxCvGrayscaleImage& BinImg)
 }
 
 
+// The sand region in projector pixels: the largest axis-aligned rectangle
+// inside the (slightly rotated) image of the Kinect sand region at sea level.
+// Games lay their splash screens, texts and backgrounds out in this, because
+// the projector frame covers far more than the sandbox. Without a projector
+// calibration it falls back to the whole projector frame.
 ofRectangle KinectProjector::getProjectorActiveROI()
 {
-	ofRectangle projROI = ofRectangle(ofPoint(0, 0), ofPoint(projRes.x, projRes.y));
+	ofRectangle full(0, 0, projRes.x, projRes.y);
+	if (!projKinectCalibrated || !ROIcalibrated || kinectROI.width <= 0 || kinectROI.height <= 0)
+		return full;
 
-	//if (kinectOpened)
-	//{
-
-	//	ofVec2f a = worldCoordTokinectCoord(projCoordAndWorldZToWorldCoord(0, 0, basePlaneOffset.z));
-	//	ofVec2f b = worldCoordTokinectCoord(projCoordAndWorldZToWorldCoord(projRes.x, 0, basePlaneOffset.z));
-	//	ofVec2f c = worldCoordTokinectCoord(projCoordAndWorldZToWorldCoord(projRes.x, projRes.y, basePlaneOffset.z));
-	//	ofVec2f d = worldCoordTokinectCoord(projCoordAndWorldZToWorldCoord(0, projRes.y, basePlaneOffset.z));
-	//	float x1 = max(a.x, d.x);
-	//	float x2 = min(b.x, c.x);
-	//	float y1 = max(a.y, b.y);
-	//	float y2 = min(c.y, d.y);
-
-	//	ofVec2f UL = kinectCoordToProjCoord(x1, y1, basePlaneOffset.z);
-	//	ofVec2f LR = kinectCoordToProjCoord(x2, y2, basePlaneOffset.z);
-	//	projROI = ofRectangle(ofPoint(UL.x, UL.y), ofPoint(LR.x, LR.y));
-	//	projROI.standardize();
-	//}
-
-	return projROI;
+	float seaDepth = basePlaneOffset.z;
+	ofVec2f ul = kinectCoordToProjCoord(kinectROI.getLeft(), kinectROI.getTop(), seaDepth);
+	ofVec2f ur = kinectCoordToProjCoord(kinectROI.getRight(), kinectROI.getTop(), seaDepth);
+	ofVec2f lr = kinectCoordToProjCoord(kinectROI.getRight(), kinectROI.getBottom(), seaDepth);
+	ofVec2f ll = kinectCoordToProjCoord(kinectROI.getLeft(), kinectROI.getBottom(), seaDepth);
+	// The projector image may be mirrored relative to the Kinect: sort per axis.
+	float lefts[2] = {std::min(ul.x, ur.x), std::min(ll.x, lr.x)};
+	float rights[2] = {std::max(ul.x, ur.x), std::max(ll.x, lr.x)};
+	float tops[2] = {std::min(ul.y, ll.y), std::min(ur.y, lr.y)};
+	float bottoms[2] = {std::max(ul.y, ll.y), std::max(ur.y, lr.y)};
+	ofRectangle inner;
+	inner.set(ofPoint(std::max(lefts[0], lefts[1]), std::max(tops[0], tops[1])),
+	          ofPoint(std::min(rights[0], rights[1]), std::min(bottoms[0], bottoms[1])));
+	inner = inner.getIntersection(full);
+	if (inner.width < 50 || inner.height < 50 || !std::isfinite(inner.x) || !std::isfinite(inner.y))
+		return full;
+	return inner;
 }
 
 void KinectProjector::SaveFilteredDepthImage()

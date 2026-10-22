@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "MapGameController.h"
 #include "../Localization/Localization.h"
+#include "FitText.h"
 
 #include <string>
 
@@ -209,8 +210,10 @@ void CMapGameController::DrawScoresOnFBO()
 {
 	fboProjWindow.begin();
 
+	// The warped map fills the whole projector frame with its border colour;
+	// show only the part on the sand.
 	if (matchResultImage.getWidth() > 0)
-		matchResultImage.draw(0, 0);
+		matchResultImage.drawSubsection(projROI.x, projROI.y, projROI.width, projROI.height, projROI.x, projROI.y);
 
 	if (doShowMatchResultContourLines)
 	{
@@ -225,8 +228,10 @@ void CMapGameController::DrawScoreTexts()
 {
 	ofSetColor(10, 30, 200);
 
-	scoreFont.drawString(ScoreText, 100, 100);
-	scoreFont.drawString(HiScoreText, 100, projRes.y-100);
+	// Top and bottom bands of the sand region.
+	float band = projROI.height * 0.18f;
+	drawStringFit(scoreFont, ScoreText, ofRectangle(projROI.x, projROI.y, projROI.width, band));
+	drawStringFit(scoreFont, HiScoreText, ofRectangle(projROI.x, projROI.getBottom() - band, projROI.width, band));
 
 }
 
@@ -305,7 +310,7 @@ bool  CMapGameController::InitiateGameSequence()
 			fboProjWindow.begin();
 			ofClear(255, 255, 255, 0);
 			ofSetColor(255, 255, 255);
-			nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
+			drawStringFit(nameFont, tr("No Island Found!"), projROI);
 			fboProjWindow.end();
 		}
 		std::cout << "Intermediate result shown" << std::endl;
@@ -317,7 +322,7 @@ bool  CMapGameController::InitiateGameSequence()
 			fboProjWindow.begin();
 			ofClear(255, 255, 255, 0);
 			ofSetColor(255, 255, 255);
-			nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
+			drawStringFit(nameFont, tr("No Island Found!"), projROI);
 			fboProjWindow.end();
 		}
 		std::cout << "Final result shown" << std::endl;
@@ -448,7 +453,9 @@ bool CMapGameController::CreateWelcomeScreen()
 
 	fboProjWindow.begin();
 	ofClear(255, 255, 255, 0);
-	ofBackground(255);
+	// White behind the splash on the sand only, not the whole projector frame.
+	ofSetColor(255);
+	ofDrawRectangle(projROI);
 
 	// Where to draw map Splash image
 	ofRectangle splashROI;
@@ -582,7 +589,9 @@ bool CMapGameController::CreateSplashScreen()
 
 	fboProjWindow.begin();
 	ofClear(255, 255, 255, 0);
-	ofBackground(255);
+	// White behind the splash on the sand only, not the whole projector frame.
+	ofSetColor(255);
+	ofDrawRectangle(projROI);
 
 	splashScreen.draw(xs, ys, sWn, sHn);
 	//ofTrueTypeFont HeadingFont;
@@ -640,7 +649,7 @@ bool CMapGameController::ButtonPressed()
 				fboProjWindow.begin();
 				ofClear(255, 255, 255, 0);
 				ofSetColor(255, 255, 255);
-				nameFont.drawString(tr("No Island Found!"), 100, projRes.y / 2);
+				drawStringFit(nameFont, tr("No Island Found!"), projROI);
 				fboProjWindow.end();
 			}
 

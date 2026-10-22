@@ -478,7 +478,9 @@ bool CBoidGameController::CreateSplashScreen()
 
 	fboVehicles.begin();
 	ofClear(255, 255, 255, 0);
-	ofBackground(255);
+	// White behind the splash on the sand only, not the whole projector frame.
+	ofSetColor(255);
+	ofDrawRectangle(projROI);
 
 	splashScreen.draw(xs, ys, sWn, sHn);
 
@@ -537,7 +539,7 @@ void CBoidGameController::setProjectorRes(ofVec2f& PR)
 
 	fboVehicles.allocate(projRes.x, projRes.y, GL_RGBA);
 	fboVehicles.begin();
-	ofClear(0, 0, 0, 255);
+	ofClear(0, 0, 0, 0); // transparent: an opaque clear blacked out the whole projector until a game ran
 	fboVehicles.end();
 }
 
