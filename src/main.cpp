@@ -131,6 +131,12 @@ int main() {
 	settings.shareContextWith = mainWindow;
 	shared_ptr<ofAppBaseWindow> secondWindow = ofCreateWindow(settings);
 	secondWindow->setVerticalSync(false);
+	if (hasSecondMonitor) {
+		// True full screen on the projector: a plain borderless window there
+		// gets pushed below that display's menu bar on macOS, shifting the
+		// picture and cutting off its bottom edge.
+		secondWindow->setFullscreen(true);
+	}
 
 	shared_ptr<ofApp> mainApp(new ofApp);
 	ofAddListener(secondWindow->events().draw, mainApp.get(), &ofApp::drawProjWindow);

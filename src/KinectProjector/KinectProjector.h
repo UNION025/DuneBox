@@ -158,6 +158,9 @@ public:
     ofTexture & getTexture(){
         return FilteredDepthImage.getTexture();
     }
+    ofVec2f getProjRes(){ // projector-window size the calibration was made in
+        return projRes;
+    }
     ofRectangle getKinectROI(){
         return kinectROI;
     }

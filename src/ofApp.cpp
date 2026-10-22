@@ -248,7 +248,6 @@ void ofApp::update() {
 			useTestTerrain = true;
 			generateTestTerrain();
 			ofTexture& testTex = testTerrainFbo.getTexture();
-			{ static int n = 0; if (++n == 60) { ofFloatPixels p; testTex.readToPixels(p); ofPixels p8; p8.allocate(p.getWidth(), p.getHeight(), OF_PIXELS_RGB); for (size_t i = 0; i < p.getWidth()*p.getHeight(); ++i) for (int ch=0; ch<3; ++ch) p8[i*3+ch] = (unsigned char)ofClamp(p[i*p.getNumChannels()+ch]*255,0,255); ofSaveImage(p8, "/private/tmp/claude-501/-Users-uni-hyper-sunaba/ea030591-5b9b-4d44-89e9-d1564d976fcc/scratchpad/monitor/terrain.png"); } } // TEMP-TERRAIN
 			waterSimUpdate(testTex, ofGetLastFrameTime());
 		}
 
@@ -443,6 +442,18 @@ void ofApp::onMonitorDrawProj(ofEventArgs& args) {
 
 void ofApp::drawProjWindow(ofEventArgs &args) 
 {
+	// Everything below is laid out in projRes, the projector-window size the
+	// calibration was made in. If the window is now another size (full screen
+	// toggled, resized), scale the whole picture so the calibration still holds.
+	ofVec2f projRes = kinectProjector->getProjRes();
+	float sx = projRes.x > 0 ? projWindow->getWidth() / projRes.x : 1.0f;
+	float sy = projRes.y > 0 ? projWindow->getHeight() / projRes.y : 1.0f;
+	bool rescale = std::abs(sx - 1.0f) > 1e-3f || std::abs(sy - 1.0f) > 1e-3f;
+	if (rescale) {
+		ofPushMatrix();
+		ofScale(sx, sy);
+	}
+
 	if (kinectProjector->GetApplicationState() == KinectProjector::APPLICATION_STATE_RUNNING)
 	{
 		sandSurfaceRenderer->drawProjectorWindow();
@@ -457,18 +468,37 @@ void ofApp::drawProjWindow(ofEventArgs &args)
 	else if (useTestTerrain && waterSimIsEnabled())
 	{
 		// No Kinect running - still show water on test terrain
-		float projW = projWindow->getWidth();
-		float projH = projWindow->getHeight();
+		float projW = projRes.x;
+		float projH = projRes.y;
 		ofSetColor(40, 30, 20); // Dark brown background for test terrain
 		ofDrawRectangle(0, 0, projW, projH);
 		ofSetColor(255);
 		waterSimDraw(projW, projH);
 	}
 	kinectProjector->drawProjectorWindow();
+
+	if (rescale)
+		ofPopMatrix();
 }
 
 void ofApp::keyPressed(int key) 
 {
+	// Shift+F: operator window full screen on/off. Plain f starts the fish
+	// game, and Cmd+F arrives as plain f (the Command state isn't reported).
+	if (key == 'F')
+	{
+		ofToggleFullscreen();
+		ofLogNotice("ofApp") << "Full screen toggled";
+		return;
+	}
+	// Shift+P: projector window full screen on/off, on whichever display it is
+	// on (drag it to the projector first if it opened on the laptop).
+	if (key == 'P' && projWindow)
+	{
+		projWindow->toggleFullscreen();
+		ofLogNotice("ofApp") << "Projector full screen toggled: " << projWindow->getWidth() << "x" << projWindow->getHeight();
+		return;
+	}
 	if (key == 'c')
 	{
 		kinectProjector->SaveKinectColorImage();
