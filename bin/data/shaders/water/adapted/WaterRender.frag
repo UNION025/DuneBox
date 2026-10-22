@@ -16,7 +16,6 @@ uniform int uErosion;
 uniform float erosionGain;
 
 in vec2 vTexCoord;
-in float waterDepth;
 out vec4 fragColor;
 
 const vec3 SCAR_COLOR = vec3(0.30, 0.17, 0.08);
@@ -24,6 +23,14 @@ const vec3 DEPOSIT_COLOR = vec3(0.96, 0.86, 0.62);
 const vec3 MUD_COLOR = vec3(0.45, 0.33, 0.18);
 
 void main() {
+    // Surface height minus cell-centred terrain, per pixel.
+    float w = texture(quantitySampler, vTexCoord).r;
+    float b = (texture(bathymetrySampler, vTexCoord + vec2(-texelSize.x, -texelSize.y)).r +
+               texture(bathymetrySampler, vTexCoord + vec2(0.0, -texelSize.y)).r +
+               texture(bathymetrySampler, vTexCoord + vec2(-texelSize.x, 0.0)).r +
+               texture(bathymetrySampler, vTexCoord).r) * 0.25;
+    float waterDepth = max(w - b, 0.0);
+
     vec2 sediment = uErosion == 1 ? texture(sedimentSampler, vTexCoord).rg : vec2(0.0);
 
     if (waterDepth < 0.001) {

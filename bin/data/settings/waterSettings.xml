@@ -1,10 +1,10 @@
 <WATERSIMULATION>
-	<gravity>9.81</gravity>
+	<gravity>2000</gravity>
 	<attenuation>0.99</attenuation>
 	<theta>1.5</theta>
 	<epsilon>0.01</epsilon>
 	<cellSize>1.0</cellSize>
-	<waterOpacity>5.0</waterOpacity>
+	<waterOpacity>40.0</waterOpacity>
 	<fixedDt>0.01</fixedDt>
 	<maxStepsPerFrame>5</maxStepsPerFrame>
 	<enabled>0</enabled>

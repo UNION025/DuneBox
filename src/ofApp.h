@@ -114,6 +114,8 @@ private:
 	ofVec2f riverCandidate{-1, -1};
 	float riverCandidateAge = 0;     // seconds the candidate peak has held still
 	float riverSearchTimer = 0;
+	float waterLogTimer = 0;
+	void logWaterState();         // periodic water/river summary in the log
 	void setRiverEnabled(bool on);
 	void updateRiver(float dt);
 	bool findTerrainPeak(ofVec2f& simPos);

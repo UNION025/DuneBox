@@ -50,6 +50,8 @@ public:
 
     /// Get the current bathymetry texture.
     ofTexture& getBathymetryTexture();
+    void resetQuantityToTerrain(int bathymetryIndex);
+    ofTexture& getWaterAddTexture() { return waterAddFbo.getTexture(); } // last frame's sources (diagnostics)
 
     // --- Configuration ---
     void setGravity(float g);

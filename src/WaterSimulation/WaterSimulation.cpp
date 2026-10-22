@@ -270,6 +270,12 @@ void WaterSimulation::drawFullscreenQuad() {
 void WaterSimulation::update(ofTexture& depthTexture, float dt) {
     if (!enabled || !initialized) return;
 
+    // The passes write state, not colour: their outputs carry alpha 0, so with
+    // OF's default alpha blending every write was discarded and the quantity
+    // grid stayed at zero (no water ever existed). Blend only where a pass asks.
+    ofPushStyle();
+    ofDisableBlendMode();
+
     // Step 0: Update bathymetry if terrain changed
     updateBathymetry(depthTexture);
 
@@ -333,6 +339,7 @@ void WaterSimulation::update(ofTexture& depthTexture, float dt) {
     waterRenderShader.end();
 
     waterRenderFbo.end();
+    ofPopStyle();
 }
 
 // --- Pipeline passes ------------------------------------------------
@@ -347,9 +354,10 @@ void WaterSimulation::updateBathymetry(ofTexture& depthTexture) {
     bathymetryFbo[newBathy].end();
 
     if (bathymetryDirty) {
-        // First frame: just copy, no water adjustment needed
+        // First frame (or after clearWater): start dry on this terrain.
         bathymetryDirty = false;
         currentBathymetry = newBathy;
+        resetQuantityToTerrain(newBathy);
         return;
     }
 
@@ -454,8 +462,12 @@ void WaterSimulation::applyWaterAdditions(float stepSize) {
     waterAddFbo.begin();
     ofClear(0, 0, 0, 0);
 
-    // Enable additive blending for overlapping rain regions
-    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    // Plain additive blending (GL_ONE, GL_ONE) as in SARndbox, so overlapping
+    // sources sum. OF_BLENDMODE_ADD is (SRC_ALPHA, ONE): with the amount also in
+    // alpha it added amount^2 (~1e-6), and no rain or river water ever appeared.
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE);
 
     waterAddShader.begin();
     waterAddShader.setUniform1f("stepSize", stepSize);
@@ -640,9 +652,29 @@ void WaterSimulation::setEnabled(bool e) { enabled = e; }
 void WaterSimulation::clearWater() {
     if (!initialized) return;
     pendingWaterAdds.clear();
-    for (int i = 0; i < 3; i++) {
+    // Zeroing the grid would mean negative depth wherever the terrain is above
+    // 0; re-start dry from the next frame's terrain instead.
+    bathymetryDirty = true;
+}
+
+// Surface = terrain, no flow. The quantity grid stores the water *surface*, so
+// a grid of zeros reads as negative depth, and the solver's sqrt(g*h) turns
+// that into NaN that spreads one cell per step (the blocky water fronts).
+void WaterSimulation::resetQuantityToTerrain(int bathymetryIndex) {
+    // BathymetryUpdate with old = new terrain and a zero quantity gives
+    // max(0 - b, 0) + b = b, already in the solver's cell-centred layout.
+    quantityFbo[2].begin();
+    ofClear(0, 0, 0, 0);
+    quantityFbo[2].end();
+    for (int i = 0; i < 2; i++) {
         quantityFbo[i].begin();
-        ofClear(0, 0, 0, 0);
+        bathymetryUpdateShader.begin();
+        bathymetryUpdateShader.setUniformTexture("oldBathymetrySampler", bathymetryFbo[bathymetryIndex].getTexture(), 0);
+        bathymetryUpdateShader.setUniformTexture("newBathymetrySampler", bathymetryFbo[bathymetryIndex].getTexture(), 1);
+        bathymetryUpdateShader.setUniformTexture("quantitySampler", quantityFbo[2].getTexture(), 2);
+        bathymetryUpdateShader.setUniform2f("texelSize", 1.0f / simWidth, 1.0f / simHeight);
+        drawFullscreenQuad();
+        bathymetryUpdateShader.end();
         quantityFbo[i].end();
     }
 }

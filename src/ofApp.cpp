@@ -248,12 +248,18 @@ void ofApp::update() {
 			useTestTerrain = true;
 			generateTestTerrain();
 			ofTexture& testTex = testTerrainFbo.getTexture();
+			{ static int n = 0; if (++n == 60) { ofFloatPixels p; testTex.readToPixels(p); ofPixels p8; p8.allocate(p.getWidth(), p.getHeight(), OF_PIXELS_RGB); for (size_t i = 0; i < p.getWidth()*p.getHeight(); ++i) for (int ch=0; ch<3; ++ch) p8[i*3+ch] = (unsigned char)ofClamp(p[i*p.getNumChannels()+ch]*255,0,255); ofSaveImage(p8, "/private/tmp/claude-501/-Users-uni-hyper-sunaba/ea030591-5b9b-4d44-89e9-d1564d976fcc/scratchpad/monitor/terrain.png"); } } // TEMP-TERRAIN
 			waterSimUpdate(testTex, ofGetLastFrameTime());
 		}
 
 		// Rain gesture detection
 		if (handRainEnabled) detectRainGesture();
 		updateRiver(ofGetLastFrameTime());
+		waterLogTimer -= ofGetLastFrameTime();
+		if (waterLogTimer <= 0) {
+			waterLogTimer = 5.0f;
+			logWaterState();
+		}
 	}
 	updateWaterGui();
 }
@@ -269,6 +275,22 @@ void ofApp::draw()
 	if (kinectProjector->GetApplicationState() == KinectProjector::APPLICATION_STATE_RUNNING)
 	{
 		sandSurfaceRenderer->drawMainWindow(x, y, w, h);//400, 20, 400, 300);
+		// The centre view is the projector image scaled down; overlay the water
+		// with the same scale so the operator sees it too.
+		if (waterSimIsEnabled() && projWindow && waterSandMesh.getNumVertices() > 0) {
+			ofPushStyle();
+			ofPushMatrix();
+			ofTranslate(x, y);
+			ofScale(w / projWindow->getWidth(), h / projWindow->getHeight());
+			ofEnableAlphaBlending();
+			ofSetColor(255);
+			ofTexture& water = waterSimGetOutputTexture();
+			water.bind();
+			waterSandMesh.draw();
+			water.unbind();
+			ofPopMatrix();
+			ofPopStyle();
+		}
 		boidGameController.drawMainWindow(x, y, w, h);
 		if (waterGui) {
 			ofPushStyle();
@@ -766,16 +788,25 @@ void ofApp::generateTestTerrain() {
 	int w = testTerrainFbo.getWidth();
 	int h = testTerrainFbo.getHeight();
 
+	// A solid triangle grid: points every 2 px left 3/4 of the texels at 0,
+	// i.e. a field of pits that swallowed any water poured on it.
+	const int step = 4;
+	int cols = w / step + 1, rows = h / step + 1;
 	ofMesh mesh;
-	mesh.setMode(OF_PRIMITIVE_POINTS);
-
-	for (int y = 0; y < h; y += 2) {
-		for (int x = 0; x < w; x += 2) {
-			float elev = testTerrainElevation((float)x / w, (float)y / h, t);
-
-			ofFloatColor c(elev, 0.0f, 0.0f, 1.0f);
+	mesh.setMode(OF_PRIMITIVE_TRIANGLES);
+	for (int r = 0; r < rows; ++r) {
+		for (int c = 0; c < cols; ++c) {
+			float x = std::min(c * step, w), y = std::min(r * step, h);
+			float elev = testTerrainElevation(x / w, y / h, t);
 			mesh.addVertex(ofVec3f(x, y, 0));
-			mesh.addColor(c);
+			mesh.addColor(ofFloatColor(elev, 0.0f, 0.0f, 1.0f));
+		}
+	}
+	for (int r = 0; r + 1 < rows; ++r) {
+		for (int c = 0; c + 1 < cols; ++c) {
+			ofIndexType i = r * cols + c;
+			mesh.addTriangle(i, i + 1, i + cols);
+			mesh.addTriangle(i + 1, i + cols + 1, i + cols);
 		}
 	}
 
@@ -1120,7 +1151,7 @@ void ofApp::updateRiver(float dt) {
 	if (riverSource.x >= 0) {
 		// Narrow, steady spring; scale by dt so the flow doesn't depend on fps.
 		const float radius = 6.0f;
-		const float amountPerFrameAt60 = 0.12f;
+		const float amountPerFrameAt60 = 0.4f;
 		waterSimAddWater(riverSource.x, riverSource.y, radius, amountPerFrameAt60 * riverFlow * dt * 60.0f);
 	}
 }
@@ -1170,4 +1201,41 @@ void ofApp::onWaterGuiButton(ofxDatGuiButtonEvent e) {
 
 void ofApp::onWaterGuiSlider(ofxDatGuiSliderEvent e) {
 	if (e.target->is("River flow")) riverFlow = (float)e.value;
+}
+
+// --- Water diagnostics --------------------------------------------------
+
+void ofApp::logWaterState() {
+	// Depth = surface height (quantity.r) - terrain (bathymetry.r), in the
+	// solver's units (1.0 = the colour map's full height range).
+	ofFloatPixels q, b;
+	ofTexture& qt = useComputeWaterSim ? waterSimCompute.getQuantityTexture() : waterSimFragment.getQuantityTexture();
+	ofTexture& bt = useComputeWaterSim ? waterSimCompute.getBathymetryTexture() : waterSimFragment.getBathymetryTexture();
+	if (!qt.isAllocated() || !bt.isAllocated()) return;
+	qt.readToPixels(q);
+	bt.readToPixels(b);
+	size_t n = std::min(q.getWidth() * q.getHeight(), b.getWidth() * b.getHeight());
+	if (n == 0) return;
+	float maxDepth = 0, minTerrain = 1e9f, maxTerrain = -1e9f;
+	size_t wet = 0;
+	// The solver's terrain is cell-centred: the mean of this texel and its
+	// left / lower / lower-left neighbours (see WaterUpdate.frag).
+	size_t w = b.getWidth();
+	auto terrainAt = [&](size_t i) { return b[i * b.getNumChannels()]; };
+	for (size_t i = 0; i < n; ++i) {
+		size_t x = i % w, y = i / w;
+		size_t il = x > 0 ? i - 1 : i, id = y > 0 ? i - w : i, ild = (x > 0 && y > 0) ? i - w - 1 : i;
+		float terrain = (terrainAt(i) + terrainAt(il) + terrainAt(id) + terrainAt(ild)) * 0.25f;
+		float depth = q[i * q.getNumChannels()] - terrain;
+		minTerrain = std::min(minTerrain, terrain);
+		maxTerrain = std::max(maxTerrain, terrain);
+		if (depth > 0.001f) ++wet;
+		maxDepth = std::max(maxDepth, depth);
+	}
+	ofLogNotice("Water") << "river " << (riverEnabled ? "on" : "off")
+		<< " source " << riverSource
+		<< " | max depth " << maxDepth
+		<< " wet " << (100.0f * wet / n) << "%"
+		<< " | terrain " << minTerrain << ".." << maxTerrain
+		<< (useTestTerrain ? " (test terrain)" : " (kinect)");
 }
