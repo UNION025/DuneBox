@@ -297,6 +297,8 @@ void SandSurfaceRenderer::drawSandbox() {
     heightMapShader.setUniform1i("drawContourLines", drawContourLines);
     heightMapShader.setUniform1f("timeOfDay", timeOfDay);
     heightMapShader.setUniform1i("dayNightEnabled", dayNightEnabled ? 1 : 0);
+    heightMapShader.setUniform1f("time", ofGetElapsedTimef());
+    heightMapShader.setUniform1i("seaAnimation", seaAnimation ? 1 : 0);
     mesh.draw();
     heightMapShader.end();
     kinectProjector->unbind();

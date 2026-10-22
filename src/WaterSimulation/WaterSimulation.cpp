@@ -307,8 +307,10 @@ void WaterSimulation::update(ofTexture& depthTexture, float dt) {
         numSteps++;
     }
 
-    // Step 6: Apply water additions (rain gestures) and evaporation
-    if (!pendingWaterAdds.empty() || (evaporationRate > 0.0f && !lavaActive)) {
+    // Step 6: Apply water additions (rain gestures), evaporation, rain on land
+    // and the sea drain
+    lastDt = dt;
+    if (!pendingWaterAdds.empty() || (!lavaActive && (evaporationRate > 0.0f || landRainPerSec > 0.0f || seaDrainPerSec > 0.0f))) {
         applyWaterAdditions(fixedDt);
         applyWaterUpdate(currentQuantity);
         currentQuantity = 1 - currentQuantity;
@@ -524,6 +526,9 @@ void WaterSimulation::applyWaterUpdate(int quantityIndex) {
     waterUpdateShader.setUniformTexture("waterSampler",
         waterAddFbo.getTexture(), 2);
     waterUpdateShader.setUniform2f("texelSize", 1.0f / simWidth, 1.0f / simHeight);
+    waterUpdateShader.setUniform1f("seaLevel", seaLevel);
+    waterUpdateShader.setUniform1f("seaKeep", lavaActive ? 1.0f : std::exp(-seaDrainPerSec * lastDt));
+    waterUpdateShader.setUniform1f("landRain", lavaActive ? 0.0f : landRainPerSec * lastDt);
     drawFullscreenQuad();
     waterUpdateShader.end();
 
@@ -605,6 +610,8 @@ void WaterSimulation::loadSettings(const std::string& path) {
     if (auto c = root.getChild("epsilon")) epsilon = c.getFloatValue();
     if (auto c = root.getChild("cellSize")) cellSize = c.getFloatValue();
     if (auto c = root.getChild("waterOpacity")) waterOpacity = c.getFloatValue();
+    if (auto c = root.getChild("seaLevel")) seaLevel = c.getFloatValue();
+    if (auto c = root.getChild("seaDrainPerSec")) seaDrainPerSec = c.getFloatValue();
     if (auto c = root.getChild("fixedDt")) fixedDt = c.getFloatValue();
     if (auto c = root.getChild("maxStepsPerFrame")) maxStepsPerFrame = c.getIntValue();
     if (auto c = root.getChild("enabled")) enabled = c.getBoolValue();
@@ -628,6 +635,8 @@ void WaterSimulation::saveSettings(const std::string& path) {
     root.appendChild("epsilon").set(epsilon);
     root.appendChild("cellSize").set(cellSize);
     root.appendChild("waterOpacity").set(waterOpacity);
+    root.appendChild("seaLevel").set(seaLevel);
+    root.appendChild("seaDrainPerSec").set(seaDrainPerSec);
     root.appendChild("fixedDt").set(fixedDt);
     root.appendChild("maxStepsPerFrame").set(maxStepsPerFrame);
     root.appendChild("enabled").set(enabled);

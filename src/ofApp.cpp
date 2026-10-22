@@ -667,6 +667,10 @@ void ofApp::keyPressed(int key)
 		volcanoSourceY = cy;
 		ofLogNotice("ofApp") << "Volcano eruption triggered at center";
 	}
+	else if (key == 'u')
+	{
+		setLandRainEnabled(!landRainEnabled);
+	}
 	else if (key == 'k')
 	{
 		setRiverEnabled(!riverEnabled);
@@ -701,6 +705,7 @@ void ofApp::handleDashboardCommand(const ofJson& msg)
 		{"dry_water", 'x'},
 		{"toggle_erosion", 'e'},
 		{"toggle_river", 'k'},
+		{"toggle_land_rain", 'u'},
 	};
 	const std::string action = msg.value("action", "");
 	ofLogNotice("Bridge") << "Dashboard command: " << action;
@@ -798,7 +803,26 @@ void ofApp::dragEvent(ofDragInfo dragInfo) {
 
 namespace {
 // The heightfield generateTestTerrain() draws, as elevation in [0,1].
+// DUNEBOX_TEST_TERRAIN=river: a cone with a groove carved from near the top
+// to the shore, ringed by sea - for checking that runoff follows a channel.
+bool riverTestTerrain() {
+	static const bool on = [] {
+		const char* v = std::getenv("DUNEBOX_TEST_TERRAIN");
+		return v && std::string(v) == "river";
+	}();
+	return on;
+}
+
 float testTerrainElevation(float fx, float fy, float t) {
+	if (riverTestTerrain()) {
+		float dx = fx - 0.5f, dy = (fy - 0.5f) * 0.75f;
+		float r = std::sqrt(dx * dx + dy * dy);
+		float elev = 0.85f - 1.3f * r;                      // cone, sea level 0.5 at r ~ 0.27
+		// Groove: 2.5 cm deep, along the ray towards the lower right.
+		float along = (dx * 0.8f + dy * 0.6f), across = std::abs(-dx * 0.6f + dy * 0.8f);
+		if (along > 0.03f && across < 0.02f) elev -= 0.06f * (1.0f - across / 0.02f);
+		return ofClamp(elev, 0.3f, 1.0f);
+	}
 	// Rolling hills with a central valley
 	float elev = 0.5f
 	    + 0.2f * sin(fx * 4.0f * PI + t)
@@ -1087,6 +1111,15 @@ void ofApp::drawWaterOnSand() {
 
 // --- River from the peak ----------------------------------------------
 
+void ofApp::setLandRainEnabled(bool on) {
+	landRainEnabled = on;
+	if (on && !waterSimIsEnabled()) waterSimToggleEnabled();
+	// ~1.3 mm/s of rain on every bit of land; the river-flow slider scales it.
+	float rate = on ? 0.003f * riverFlow : 0.0f;
+	if (!useComputeWaterSim) waterSimFragment.setLandRain(rate);
+	ofLogNotice("ofApp") << "Rain on land: " << (on ? "ON" : "OFF");
+}
+
 void ofApp::setRiverEnabled(bool on) {
 	riverEnabled = on;
 	riverSource.set(-1, -1);
@@ -1097,7 +1130,7 @@ void ofApp::setRiverEnabled(bool on) {
 	ofLogNotice("ofApp") << "River: " << (on ? "ON" : "OFF");
 }
 
-bool ofApp::findTerrainPeak(ofVec2f& simPos) {
+bool ofApp::findTerrainPeak(ofVec2f& simPos, float& elevationMm) {
 	const float simW = (float)waterSimGetSimWidth();
 	const float simH = (float)waterSimGetSimHeight();
 
@@ -1111,6 +1144,7 @@ bool ofApp::findTerrainPeak(ofVec2f& simPos) {
 			}
 		}
 		simPos.set(bx * simW, by * simH);
+		elevationMm = best * 440.0f;
 		return true;
 	}
 
@@ -1152,7 +1186,17 @@ bool ofApp::findTerrainPeak(ofVec2f& simPos) {
 
 	ofVec2f kinectRes = kinectProjector->getKinectRes();
 	simPos.set((x0 + bestC * step) / kinectRes.x * simW, (y0 + bestR * step) / kinectRes.y * simH);
+	elevationMm = best;
 	return true;
+}
+
+float ofApp::terrainElevationAtSim(const ofVec2f& simPos) {
+	const float simW = (float)waterSimGetSimWidth();
+	const float simH = (float)waterSimGetSimHeight();
+	if (useTestTerrain)
+		return testTerrainElevation(simPos.x / simW, simPos.y / simH, ofGetElapsedTimef() * 0.1f) * 440.0f;
+	ofVec2f kinectRes = kinectProjector->getKinectRes();
+	return kinectProjector->elevationAtKinectCoord(simPos.x / simW * kinectRes.x, simPos.y / simH * kinectRes.y);
 }
 
 void ofApp::updateRiver(float dt) {
@@ -1160,21 +1204,31 @@ void ofApp::updateRiver(float dt) {
 
 	// Look for the peak a few times a second. A hand over the sand makes a
 	// short-lived peak, so the spring only moves once the peak has held still.
+	// Two peaks of about the same height used to trade places on sensor noise,
+	// so the spring hopped back and forth and left a pool at every spot it had
+	// been. It now moves only to a peak clearly higher than where it is.
 	const float searchInterval = 0.25f;
 	const float holdSeconds = 1.0f;
 	const float samePeakPx = 20.0f;
+	const float higherByMm = 15.0f;
 	riverSearchTimer -= dt;
 	if (riverSearchTimer <= 0) {
 		riverSearchTimer = searchInterval;
 		ofVec2f peak;
-		if (findTerrainPeak(peak)) {
+		float peakMm = 0;
+		if (findTerrainPeak(peak, peakMm)) {
 			if (riverCandidate.x < 0 || riverCandidate.distance(peak) > samePeakPx)
 				riverCandidateAge = 0;
 			else
 				riverCandidateAge += searchInterval;
 			riverCandidate = peak;
-			if (riverSource.x < 0 || riverCandidateAge >= holdSeconds)
+			if (riverSource.x < 0) {
 				riverSource = riverCandidate;
+			} else if (riverCandidateAge >= holdSeconds && riverSource.distance(riverCandidate) > samePeakPx &&
+			           peakMm > terrainElevationAtSim(riverSource) + higherByMm) {
+				ofLogNotice("ofApp") << "River spring moves to " << riverCandidate << " (" << peakMm << " mm)";
+				riverSource = riverCandidate;
+			}
 		}
 	}
 
@@ -1193,6 +1247,8 @@ void ofApp::setupWaterGui() {
 	waterGui = new ofxDatGui(0, 255);
 	trLabel(waterGui->addHeader("Water", false));
 	trLabel(waterGui->addToggle("Water simulation  (W)", waterSimIsEnabled()))->setName("Water");
+	trLabel(waterGui->addToggle("Sea waves", sandSurfaceRenderer->isSeaAnimation()))->setName("Sea waves");
+	trLabel(waterGui->addToggle("Rain on the land  (U)", landRainEnabled))->setName("Land rain");
 	trLabel(waterGui->addToggle("River from the peak  (K)", riverEnabled))->setName("River");
 	trLabel(waterGui->addSlider("River flow", 0.2, 3.0, riverFlow))->setName("River flow");
 	trLabel(waterGui->addToggle("Rain from hands", handRainEnabled))->setName("Hand rain");
@@ -1211,6 +1267,7 @@ void ofApp::updateWaterGui() {
 	// Keys and the bridge can change these too; keep the toggles honest.
 	waterGui->getToggle("Water")->setChecked(waterSimIsEnabled());
 	waterGui->getToggle("River")->setChecked(riverEnabled);
+	waterGui->getToggle("Land rain")->setChecked(landRainEnabled);
 	waterGui->getToggle("Hand rain")->setChecked(handRainEnabled);
 	waterGui->update();
 }
@@ -1220,6 +1277,10 @@ void ofApp::onWaterGuiToggle(ofxDatGuiToggleEvent e) {
 		if (e.checked != waterSimIsEnabled()) waterSimToggleEnabled();
 	} else if (e.target->is("River")) {
 		setRiverEnabled(e.checked);
+	} else if (e.target->is("Sea waves")) {
+		sandSurfaceRenderer->setSeaAnimation(e.checked);
+	} else if (e.target->is("Land rain")) {
+		setLandRainEnabled(e.checked);
 	} else if (e.target->is("Hand rain")) {
 		handRainEnabled = e.checked;
 	}
@@ -1230,7 +1291,10 @@ void ofApp::onWaterGuiButton(ofxDatGuiButtonEvent e) {
 }
 
 void ofApp::onWaterGuiSlider(ofxDatGuiSliderEvent e) {
-	if (e.target->is("River flow")) riverFlow = (float)e.value;
+	if (e.target->is("River flow")) {
+		riverFlow = (float)e.value;
+		if (landRainEnabled) setLandRainEnabled(true); // rescale the rain
+	}
 }
 
 // --- Water diagnostics --------------------------------------------------

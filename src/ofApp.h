@@ -118,7 +118,11 @@ private:
 	void logWaterState();         // periodic water/river summary in the log
 	void setRiverEnabled(bool on);
 	void updateRiver(float dt);
-	bool findTerrainPeak(ofVec2f& simPos);
+	// Elevations here are millimetres (test terrain: 0..1 scaled to 440 mm).
+	bool findTerrainPeak(ofVec2f& simPos, float& elevationMm);
+	float terrainElevationAtSim(const ofVec2f& simPos);
+	bool landRainEnabled = false;   // rain on all land: runoff forms rivers
+	void setLandRainEnabled(bool on);
 
 	// Operator panel for the water features (shown while running).
 	ofxDatGui* waterGui = nullptr;

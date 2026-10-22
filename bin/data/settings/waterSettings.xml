@@ -5,6 +5,8 @@
 	<epsilon>0.01</epsilon>
 	<cellSize>1.0</cellSize>
 	<waterOpacity>40.0</waterOpacity>
+	<seaLevel>0.5</seaLevel>
+	<seaDrainPerSec>2.0</seaDrainPerSec>
 	<fixedDt>0.01</fixedDt>
 	<maxStepsPerFrame>5</maxStepsPerFrame>
 	<enabled>0</enabled>

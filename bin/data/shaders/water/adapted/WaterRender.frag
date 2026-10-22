@@ -29,7 +29,10 @@ void main() {
                texture(bathymetrySampler, vTexCoord + vec2(0.0, -texelSize.y)).r +
                texture(bathymetrySampler, vTexCoord + vec2(-texelSize.x, 0.0)).r +
                texture(bathymetrySampler, vTexCoord).r) * 0.25;
-    float waterDepth = max(w - b, 0.0);
+    // Ignore sub-millimetre films (numerical spreading, sensor noise): drawn,
+    // they turned the whole field faintly blue.
+    const float minDepth = 0.003;
+    float waterDepth = max(w - b - minDepth, 0.0);
 
     vec2 sediment = uErosion == 1 ? texture(sedimentSampler, vTexCoord).rg : vec2(0.0);
 

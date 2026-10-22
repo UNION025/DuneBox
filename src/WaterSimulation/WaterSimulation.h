@@ -85,6 +85,11 @@ public:
     void setEvaporationRate(float rate) { evaporationRate = std::max(0.0f, rate); }
     float getEvaporationRate() const { return evaporationRate; }
 
+    // Rain on land: every cell above sea level gets this much water per
+    // second, so runoff gathers in valleys and carved grooves (rivers).
+    void setLandRain(float perSecond) { landRainPerSec = std::max(0.0f, perSecond); }
+    float getLandRain() const { return landRainPerSec; }
+
     /// Remove all water (and lava) from the grid.
     void clearWater();
 
@@ -176,6 +181,14 @@ private:
     bool initialized;
     bool lavaActive;
     float evaporationRate = 0.0f;
+    float landRainPerSec = 0.0f;
+    // Terrain value of sea level (the colour map's 0; bathymetry 0..1 spans
+    // the map's range, so 0.5 for the symmetric default map). Water over the
+    // sea drains away at seaDrainPerSec, so rivers end in the sea instead of
+    // the box filling up.
+    float seaLevel = 0.5f;
+    float seaDrainPerSec = 2.0f;
+    float lastDt = 1.0f / 60.0f;
     bool erosionEnabled = false;
 
     // Saved base values for toggling lava mode

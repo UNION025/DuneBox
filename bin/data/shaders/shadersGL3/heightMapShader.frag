@@ -34,6 +34,27 @@ uniform float contourLineFactor;
 uniform int drawContourLines;
 uniform float timeOfDay;
 uniform int dayNightEnabled;
+uniform vec2 heightColorMapTransformation; // elevation -> colour-map coordinate (same as the vertex shader)
+uniform float time;
+uniform int seaAnimation;
+
+// Below sea level: drifting ripples and foam lapping at the shore. depthfrag
+// is the colour-map coordinate; heightColorMapTransformation.y is where
+// elevation 0 (sea level) lands, and 1/|x| is millimetres per unit.
+vec3 animateSea(vec3 color) {
+    float seaCoord = heightColorMapTransformation.y;
+    float depthMm = (seaCoord - depthfrag) / abs(heightColorMapTransformation.x);
+    if (depthMm <= 0.0) return color;
+    vec2 p = gl_FragCoord.xy;
+    float waves = sin(dot(p, vec2(0.11, 0.07)) + time * 1.6)
+                + sin(dot(p, vec2(-0.06, 0.13)) + time * 1.1)
+                + 0.5 * sin(dot(p, vec2(0.17, -0.12)) - time * 2.3);
+    float calm = clamp(depthMm / 120.0, 0.0, 1.0);          // deeper water moves less
+    color *= 1.0 + (waves / 2.5) * mix(0.12, 0.05, calm);
+    float foamMm = 5.0 + 4.0 * sin(time * 1.3 + dot(p, vec2(0.02, 0.015)));
+    float foam = 1.0 - smoothstep(0.0, foamMm, depthMm);
+    return mix(color, vec3(1.0), foam * 0.5);
+}
 
 // Compute day/night tint from timeOfDay (0=midnight, 0.5=noon)
 vec3 getDayNightTint() {
@@ -57,6 +78,8 @@ void main()
 {
     vec2 depthPos = vec2(depthfrag, 0.5);//depthvalue*texsize, 0.5);
     vec4 color =  texture(heightColorMapSampler, depthPos);	//colormap converted depth
+    if (seaAnimation == 1)
+        color.rgb = animateSea(color.rgb);
 
     if (drawContourLines == 1)
     {
