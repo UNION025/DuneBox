@@ -111,6 +111,9 @@ int main() {
 	setWindowDimensions(settings, 0);
 	mainWindow->setWindowPosition(ofGetScreenWidth() / 2 - settings.getWidth() / 2, ofGetScreenHeight() / 2 - settings.getHeight() / 2);
     mainWindow->setWindowShape(settings.getWidth(), settings.getHeight());
+	// Open the operator window maximised (screen minus menu bar and Dock); it
+	// stays resizable and ofApp scales the centre view to whatever size it has.
+	glfwMaximizeWindow(static_cast<ofAppGLFWWindow*>(mainWindow.get())->getGLFWWindow());
     
 	bool hasSecondMonitor = setWindowDimensions(settings, 1);
 	settings.resizable = false;

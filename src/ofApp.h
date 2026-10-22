@@ -126,8 +126,11 @@ private:
 	void onWaterGuiButton(ofxDatGuiButtonEvent e);
 	void onWaterGuiSlider(ofxDatGuiSliderEvent e);
 
-	// Main window ROI 
+	// Main window ROI: where the Kinect-sized centre view (camera / sand map)
+	// is drawn, scaled by mainViewScale to fit between the GUI columns.
 	ofRectangle mainWindowROI;
+	float mainViewScale = 1.0f;
+	void layoutMainView(int w, int h);
 
 	// Theme display overlay
 	std::string themeDisplayName;

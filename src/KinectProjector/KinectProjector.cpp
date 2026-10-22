@@ -1268,15 +1268,8 @@ void KinectProjector::drawProjectorWindow(){
 
 void KinectProjector::drawMainWindow(float x, float y, float width, float height){
 
-	bool forceScale = false;
-	if (forceScale)
-	{
-		fboMainWindow.draw(x, y, width, height);
-	}
-	else
-	{
-		fboMainWindow.draw(x, y);
-	}
+	// Scaled to the rectangle ofApp lays out (it grows with the window).
+	fboMainWindow.draw(x, y, width, height);
 
 	if (displayGui)
 	{

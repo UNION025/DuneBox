@@ -72,7 +72,7 @@ void ofApp::setup() {
 	ofRectangle kinectROI = kinectProjector->getKinectROI();
 	////mainWindowROI = ofRectangle(600, 30, 600, 450);
 	//mainWindowROI = ofRectangle(0, 0, 640, 480);
-	mainWindowROI = ofRectangle((ofGetWindowWidth()-kinectRes.x)/2, (ofGetWindowHeight()-kinectRes.y)/2, kinectRes.x, kinectRes.y);
+	layoutMainView(ofGetWindowWidth(), ofGetWindowHeight());
 
 	mapGameController.setup(kinectProjector);
 	mapGameController.setProjectorRes(projRes);
@@ -688,20 +688,20 @@ void ofApp::mouseMoved(int x, int y) {
 void ofApp::mouseDragged(int x, int y, int button) {
 
 	// We assume that we only use this during ROI annotation
-	kinectProjector->mouseDragged(x - mainWindowROI.x, y - mainWindowROI.y, button);
+	kinectProjector->mouseDragged((x - mainWindowROI.x) / mainViewScale, (y - mainWindowROI.y) / mainViewScale, button);
 }
 
 void ofApp::mousePressed(int x, int y, int button) 
 {
 	if (mainWindowROI.inside((float)x, (float)y))
 	{
-		kinectProjector->mousePressed(x-mainWindowROI.x, y-mainWindowROI.y, button);
+		kinectProjector->mousePressed((x - mainWindowROI.x) / mainViewScale, (y - mainWindowROI.y) / mainViewScale, button);
 	}
 }
 
 void ofApp::mouseReleased(int x, int y, int button) {
 	// We assume that we only use this during ROI annotation
-	kinectProjector->mouseReleased(x - mainWindowROI.x, y - mainWindowROI.y, button);
+	kinectProjector->mouseReleased((x - mainWindowROI.x) / mainViewScale, (y - mainWindowROI.y) / mainViewScale, button);
 
 }
 
@@ -715,9 +715,23 @@ void ofApp::mouseExited(int x, int y) {
 
 void ofApp::windowResized(int w, int h) {
 	if (!kinectProjector) return;
+	layoutMainView(w, h);
+}
+
+// Fit the centre view between the GUI columns, keeping the Kinect's 4:3 shape,
+// so a maximised window on a large screen shows the camera and map larger.
+void ofApp::layoutMainView(int w, int h) {
 	ofVec2f kinectRes = kinectProjector->getKinectRes();
 	if (kinectRes.x <= 0 || kinectRes.y <= 0) return;
-	mainWindowROI = ofRectangle((w - kinectRes.x) / 2, (h - kinectRes.y) / 2, kinectRes.x, kinectRes.y);
+	const float panelWidth = 300.0f; // DuneBoxGuiTheme layout.width
+	const float margin = 12.0f;
+	ofRectangle area(panelWidth + margin, margin, w - 2 * (panelWidth + margin), h - 2 * margin);
+	if (area.width < kinectRes.x * 0.5f) // narrow window: use the full width under the panels
+		area.set(margin, margin, w - 2 * margin, h - 2 * margin);
+	float scale = std::max(0.1f, std::min(area.width / kinectRes.x, area.height / kinectRes.y));
+	float vw = kinectRes.x * scale, vh = kinectRes.y * scale;
+	mainWindowROI.set(area.x + (area.width - vw) / 2, area.y + (area.height - vh) / 2, vw, vh);
+	mainViewScale = scale;
 }
 
 void ofApp::gotMessage(ofMessage msg) {
